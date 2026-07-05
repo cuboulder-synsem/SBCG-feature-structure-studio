@@ -12,6 +12,9 @@ Verbal category supertype.
 
 | Feature | Expected value |
 | --- | --- |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 | VF | vform |
 | IC | boolean |
 
@@ -28,4 +31,4 @@ Verbal category supertype.
 
 ## Notes
 
-`VF` and `IC` are atomic values rendered from registry-defined dropdowns.
+`VF` and `IC` are atomic values rendered from registry-defined dropdowns. Verbal CAT values inherit `SELECT`, `XARG`, and `LID` from `category`.

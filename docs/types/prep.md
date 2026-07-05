@@ -12,7 +12,9 @@ Preposition category subtype.
 
 | Feature | Expected value |
 | --- | --- |
-| (none) | - |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 
 ## Example JSON
 
@@ -25,4 +27,4 @@ Preposition category subtype.
 
 ## Notes
 
-The type currently relies on inherited category geometry.
+The type relies on inherited nominal/category geometry. It does not license `CASE` or verb-only features unless retargeted to a subtype that does.

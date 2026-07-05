@@ -1,5 +1,10 @@
 import { GitBranchPlus, Link2, Trash2, Unlink } from "lucide-react";
-import { createInitialSign, collectIndexIds, type FeatureStructure } from "../core/model";
+import {
+  createInitialSign,
+  collectIndexIds,
+  collectTagDefinitions,
+  type FeatureStructure
+} from "../core/model";
 import { createTreeNode, type TreeNode } from "../core/treeModel";
 import { FeatureStructureEditor } from "./FeatureStructureEditor";
 
@@ -19,6 +24,7 @@ export function TreeEditor({
   onDelete
 }: TreeEditorProps) {
   const childIndexes = node.avm ? collectIndexIds(node.avm) : [];
+  const childTags = node.avm ? collectTagDefinitions(node.avm) : [];
 
   return (
     <div className="tree-editor-node">
@@ -57,6 +63,7 @@ export function TreeEditor({
             structure={node.avm}
             onChange={(avm: FeatureStructure) => onChange({ ...node, avm })}
             availableIndexes={childIndexes}
+            availableTags={childTags}
             activeIndex={activeIndex}
             onSelectIndex={onSelectIndex}
             compact

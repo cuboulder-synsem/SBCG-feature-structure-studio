@@ -12,7 +12,11 @@ Complementizer category subtype.
 
 | Feature | Expected value |
 | --- | --- |
-| (none) | - |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
+| VF | vform |
+| IC | boolean |
 
 ## Example JSON
 
@@ -25,4 +29,4 @@ Complementizer category subtype.
 
 ## Notes
 
-Inherited verbal/category features remain available through the registry.
+Complementizers inherit verbal/category features. They do not license `AUX` or `INV` unless retargeted to `verb`.

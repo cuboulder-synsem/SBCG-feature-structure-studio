@@ -1,10 +1,11 @@
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
   Circle,
   CornerDownRight,
+  GripVertical,
   Link2,
   ListPlus,
+  MoreHorizontal,
   Plus,
   Trash2
 } from "lucide-react";
@@ -12,13 +13,14 @@ import {
   createFeatureEntry,
   createIndexRefValue,
   createListValue,
+  createTagReferenceForValue,
+  createTagRefValue,
   defaultValueForKind,
-  moveFeatureById,
-  moveFeatureToPosition,
   orderFeaturesCanonically,
   type FeatureEntry,
   type FeatureStructure,
   type FSValue,
+  type TagDefinition,
   type ValueKind
 } from "../core/model";
 import {
@@ -53,11 +55,14 @@ const valueKinds: ValueKind[] = [
   "underspecified"
 ];
 const frameElementOptionValue = "__frame_element__";
+const customFeatureOptionValue = "__custom_feature__";
+type FeatureDropPosition = "before" | "after";
 
 interface FeatureStructureEditorProps {
   structure: FeatureStructure;
   onChange: (structure: FeatureStructure) => void;
   availableIndexes: string[];
+  availableTags?: TagDefinition[];
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
   compact?: boolean;
@@ -69,6 +74,7 @@ export function FeatureStructureEditor({
   structure,
   onChange,
   availableIndexes,
+  availableTags = [],
   activeIndex,
   onSelectIndex,
   compact = false,
@@ -77,6 +83,12 @@ export function FeatureStructureEditor({
 }: FeatureStructureEditorProps) {
   const rootStructure = rootStructureProp ?? structure;
   const onRootChange = onRootChangeProp ?? onChange;
+  const draggedFeatureIdRef = useRef<string | null>(null);
+  const [draggedFeatureId, setDraggedFeatureId] = useState<string | null>(null);
+  const [dragOverFeature, setDragOverFeature] = useState<{
+    featureId: string;
+    position: FeatureDropPosition;
+  } | null>(null);
   const typeSpec = getSbcgTypeSpec(structure.type);
   const missingFeatureSuggestions = getMissingFeatureSuggestions(structure);
   const typeOptionsId = `${structure.id}-type-options`;
@@ -93,6 +105,14 @@ export function FeatureStructureEditor({
       features: orderFeaturesCanonically([
         ...structure.features,
         createFeatureEntryFromSpec(suggestion)
+      ])
+    });
+  const addCustomFeature = () =>
+    onChange({
+      ...structure,
+      features: orderFeaturesCanonically([
+        ...structure.features,
+        createFeatureEntry("FEATURE")
       ])
     });
   const addFrameElement = () =>
@@ -112,6 +132,53 @@ export function FeatureStructureEditor({
       ...structure,
       features: canonicalizeOrder ? orderFeaturesCanonically(features) : features
     });
+  };
+  const startFeatureDrag = (featureId: string, event: DragEvent<HTMLButtonElement>) => {
+    draggedFeatureIdRef.current = featureId;
+    setDraggedFeatureId(featureId);
+    const dataTransfer = event.dataTransfer;
+    if (dataTransfer) {
+      dataTransfer.effectAllowed = "move";
+      dataTransfer.setData("text/plain", featureId);
+    }
+  };
+  const updateFeatureDragTarget = (featureId: string, event: DragEvent<HTMLDivElement>) => {
+    if (!draggedFeatureIdRef.current || draggedFeatureIdRef.current === featureId) {
+      return;
+    }
+    event.preventDefault();
+    const dataTransfer = event.dataTransfer;
+    if (dataTransfer) {
+      dataTransfer.dropEffect = "move";
+    }
+    setDragOverFeature({
+      featureId,
+      position: getFeatureDropPosition(event)
+    });
+  };
+  const dropFeatureOnTarget = (featureId: string, event: DragEvent<HTMLDivElement>) => {
+    const sourceFeatureId = draggedFeatureIdRef.current;
+    if (!sourceFeatureId || sourceFeatureId === featureId) {
+      clearFeatureDrag();
+      return;
+    }
+
+    event.preventDefault();
+    onChange({
+      ...structure,
+      features: reorderFeatureEntries(
+        structure.features,
+        sourceFeatureId,
+        featureId,
+        getFeatureDropPosition(event)
+      )
+    });
+    clearFeatureDrag();
+  };
+  const clearFeatureDrag = () => {
+    draggedFeatureIdRef.current = null;
+    setDraggedFeatureId(null);
+    setDragOverFeature(null);
   };
 
   return (
@@ -137,6 +204,7 @@ export function FeatureStructureEditor({
           <LicensedFeaturePicker
             suggestions={missingFeatureSuggestions}
             onAdd={addFeatureFromSpec}
+            onAddCustom={addCustomFeature}
             onAddFrameElement={canAddFrameElement ? addFrameElement : undefined}
           />
         ) : (
@@ -161,46 +229,44 @@ export function FeatureStructureEditor({
       </div>
 
       <div className="feature-list">
-        {structure.features.map((feature, index) => {
+        {structure.features.map((feature) => {
           const featureSpec = getFeatureSpecForType(structure.type, feature.name);
           const frameParticipant = participantByFeatureId.get(feature.id);
+          const dragPosition =
+            dragOverFeature?.featureId === feature.id ? dragOverFeature.position : undefined;
           return (
-            <div className="feature-row" key={feature.id}>
-            <div className="order-controls" aria-label={`Order controls for ${feature.name}`}>
-              <button
-                className="icon-button"
-                type="button"
-                title={`Move ${feature.name} up`}
-                disabled={index === 0}
-                onClick={() => onChange(moveFeatureById(structure, feature.id, -1))}
-              >
-                <ArrowUp size={15} />
-              </button>
-              <label>
-                Order
-                <input
-                  min={1}
-                  max={structure.features.length}
-                  type="number"
-                  value={index + 1}
-                  aria-label={`Order of ${feature.name}`}
-                  onChange={(event) =>
-                    onChange(
-                      moveFeatureToPosition(structure, feature.id, Number(event.target.value))
-                    )
-                  }
-                />
-              </label>
-              <button
-                className="icon-button"
-                type="button"
-                title={`Move ${feature.name} down`}
-                disabled={index === structure.features.length - 1}
-                onClick={() => onChange(moveFeatureById(structure, feature.id, 1))}
-              >
-                <ArrowDown size={15} />
-              </button>
-            </div>
+            <div
+              className={[
+                "feature-row",
+                draggedFeatureId === feature.id ? "dragging" : "",
+                dragPosition ? `drag-over-${dragPosition}` : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              data-feature-name={feature.name}
+              key={feature.id}
+              onDragLeave={(event) => {
+                if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  return;
+                }
+                setDragOverFeature((current) =>
+                  current?.featureId === feature.id ? null : current
+                );
+              }}
+              onDragOver={(event) => updateFeatureDragTarget(feature.id, event)}
+              onDrop={(event) => dropFeatureOnTarget(feature.id, event)}
+            >
+            <button
+              className="icon-button feature-drag-handle"
+              draggable
+              type="button"
+              aria-label={`Drag ${feature.name} to reorder`}
+              title={`Drag ${feature.name}`}
+              onDragEnd={clearFeatureDrag}
+              onDragStart={(event) => startFeatureDrag(feature.id, event)}
+            >
+              <GripVertical size={16} />
+            </button>
             <input
               className="feature-name-input"
               aria-label="Feature name"
@@ -226,6 +292,7 @@ export function FeatureStructureEditor({
                 value={feature.value}
                 onChange={(value) => updateFeature(feature.id, { ...feature, value })}
                 availableIndexes={availableIndexes}
+                availableTags={availableTags}
                 activeIndex={activeIndex}
                 onSelectIndex={onSelectIndex}
                 rootStructure={rootStructure}
@@ -259,7 +326,7 @@ export function FeatureStructureEditor({
               )}
             </div>
             <button
-              className="icon-button danger"
+              className="icon-button danger feature-delete-button"
               type="button"
               title={`Delete ${feature.name}`}
               onClick={() =>
@@ -279,17 +346,53 @@ export function FeatureStructureEditor({
   );
 }
 
+function reorderFeatureEntries(
+  features: FeatureEntry[],
+  sourceFeatureId: string,
+  targetFeatureId: string,
+  position: FeatureDropPosition
+): FeatureEntry[] {
+  const sourceIndex = features.findIndex((feature) => feature.id === sourceFeatureId);
+  const targetIndex = features.findIndex((feature) => feature.id === targetFeatureId);
+
+  if (
+    sourceIndex < 0 ||
+    targetIndex < 0 ||
+    sourceIndex === targetIndex
+  ) {
+    return features;
+  }
+
+  const nextFeatures = [...features];
+  const [movingFeature] = nextFeatures.splice(sourceIndex, 1);
+  let insertionIndex = targetIndex + (position === "after" ? 1 : 0);
+  if (sourceIndex < insertionIndex) {
+    insertionIndex -= 1;
+  }
+  nextFeatures.splice(insertionIndex, 0, movingFeature);
+  return nextFeatures;
+}
+
+function getFeatureDropPosition(event: DragEvent<HTMLDivElement>): FeatureDropPosition {
+  const rect = event.currentTarget.getBoundingClientRect();
+  if (rect.height <= 0) {
+    return "before";
+  }
+  return event.clientY > rect.top + rect.height / 2 ? "after" : "before";
+}
+
 function LicensedFeaturePicker({
   suggestions,
   onAdd,
+  onAddCustom,
   onAddFrameElement
 }: {
   suggestions: FeatureSuggestion[];
   onAdd: (suggestion: FeatureSuggestion) => void;
+  onAddCustom: () => void;
   onAddFrameElement?: () => void;
 }) {
   const hasFrameElementAction = Boolean(onAddFrameElement);
-  const isDisabled = suggestions.length === 0 && !hasFrameElementAction;
 
   return (
     <label className="licensed-feature-picker">
@@ -297,10 +400,13 @@ function LicensedFeaturePicker({
       <select
         aria-label="Add licensed feature"
         value=""
-        disabled={isDisabled}
         onChange={(event) => {
           if (event.target.value === frameElementOptionValue) {
             onAddFrameElement?.();
+            return;
+          }
+          if (event.target.value === customFeatureOptionValue) {
+            onAddCustom();
             return;
           }
 
@@ -315,9 +421,7 @@ function LicensedFeaturePicker({
         <option value="">
           {suggestions.length > 0
             ? "Add licensed feature"
-            : hasFrameElementAction
-              ? "Add feature"
-              : "All features added"}
+            : "Add feature"}
         </option>
         {suggestions.map((suggestion) => (
           <option key={suggestion.name} value={suggestion.name}>
@@ -327,6 +431,7 @@ function LicensedFeaturePicker({
         {hasFrameElementAction && (
           <option value={frameElementOptionValue}>Add frame element</option>
         )}
+        <option value={customFeatureOptionValue}>Custom feature</option>
       </select>
     </label>
   );
@@ -446,6 +551,7 @@ interface ValueEditorProps {
   value: FSValue;
   onChange: (value: FSValue) => void;
   availableIndexes: string[];
+  availableTags: TagDefinition[];
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
   featureName?: string;
@@ -458,6 +564,7 @@ function ValueEditor({
   value,
   onChange,
   availableIndexes,
+  availableTags,
   activeIndex,
   onSelectIndex,
   featureName,
@@ -466,22 +573,25 @@ function ValueEditor({
   onRootChange
 }: ValueEditorProps) {
   const indexedClass = value.indexId && value.indexId === activeIndex ? " index-active" : "";
+  const taggedClass = value.tag && `tag:${value.tag}` === activeIndex ? " tag-active" : "";
 
   return (
-    <div className={`value-editor${indexedClass}`}>
+    <div className={`value-editor${indexedClass}${taggedClass}`}>
       <div className="value-toolbar">
         <select
           aria-label="Value type"
           value={value.kind}
-          onChange={(event) => onChange(defaultValueForKind(event.target.value as ValueKind))}
+          onChange={(event) =>
+            onChange(createValueForSelectedKind(event.target.value as ValueKind, value, availableTags))
+          }
         >
-          {valueKinds.map((kind) => (
+          {getVisibleValueKinds(value.kind).map((kind) => (
             <option key={kind} value={kind}>
               {kind}
             </option>
           ))}
         </select>
-        {value.kind !== "index-ref" && (
+        {value.kind !== "index-ref" && value.kind !== "tag-ref" && (
           <label className="index-input">
             <Circle size={14} />
             <input
@@ -497,25 +607,12 @@ function ValueEditor({
             />
           </label>
         )}
-        {availableIndexes.length > 0 && (
-          <select
-            aria-label="Reuse index"
-            value={value.kind === "index-ref" ? value.indexId : ""}
-            onChange={(event) => {
-              if (event.target.value) {
-                onChange({ kind: "index-ref", indexId: event.target.value });
-                onSelectIndex(event.target.value);
-              }
-            }}
-          >
-            <option value="">Reuse index</option>
-            {availableIndexes.map((indexId) => (
-              <option key={indexId} value={indexId}>
-                #{indexId}
-              </option>
-            ))}
-          </select>
-        )}
+        <ValueActionsMenu
+          value={value}
+          availableTags={availableTags}
+          onChange={onChange}
+          onSelectIndex={onSelectIndex}
+        />
       </div>
       <ValueBodyEditor
         featureName={featureName}
@@ -523,6 +620,7 @@ function ValueEditor({
         value={value}
         onChange={onChange}
         availableIndexes={availableIndexes}
+        availableTags={availableTags}
         activeIndex={activeIndex}
         onSelectIndex={onSelectIndex}
         rootStructure={rootStructure}
@@ -532,8 +630,150 @@ function ValueEditor({
   );
 }
 
+function createValueForSelectedKind(
+  kind: ValueKind,
+  currentValue: FSValue,
+  availableTags: TagDefinition[]
+): FSValue {
+  const currentTag = currentValue.tag;
+  if (kind === "tag-ref") {
+    return createTagRefValue(currentTag || availableTags[0]?.tag || "1");
+  }
+
+  const nextValue = defaultValueForKind(kind);
+  if (currentTag) {
+    return { ...nextValue, tag: currentTag } as FSValue;
+  }
+  return nextValue;
+}
+
+function getVisibleValueKinds(currentKind: ValueKind): ValueKind[] {
+  if (currentKind === "tag-ref") {
+    return [...valueKinds, "tag-ref"];
+  }
+  return valueKinds;
+}
+
+function ValueActionsMenu({
+  value,
+  availableTags,
+  onChange,
+  onSelectIndex
+}: {
+  value: FSValue;
+  availableTags: TagDefinition[];
+  onChange: (value: FSValue) => void;
+  onSelectIndex: (indexId: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const currentTag = value.tag ?? "";
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  const setTag = (nextTag: string) => {
+    const normalizedTag = nextTag.trim();
+    if (value.kind === "tag-ref") {
+      onChange(createTagRefValue(normalizedTag));
+    } else {
+      onChange({
+        ...value,
+        tag: normalizedTag || undefined
+      });
+    }
+    if (normalizedTag) {
+      onSelectIndex(`tag:${normalizedTag}`);
+    }
+  };
+
+  return (
+    <details className="value-actions-menu" open={isOpen} ref={menuRef}>
+      <summary
+        className="icon-button value-actions-summary"
+        aria-label="Value actions"
+        title="Value actions"
+        onClick={(event) => {
+          event.preventDefault();
+          setIsOpen((currentIsOpen) => !currentIsOpen);
+        }}
+      >
+        <MoreHorizontal size={16} />
+      </summary>
+      <div className="value-actions-panel">
+        <label>
+          Tag
+          <input
+            value={currentTag}
+            placeholder="1 or L"
+            onChange={(event) => setTag(event.target.value)}
+          />
+        </label>
+        {availableTags.length > 0 && (
+          <label>
+            Tag reference
+            <select
+              aria-label="Tag reference"
+              value={value.kind === "tag-ref" ? value.tag : ""}
+              onChange={(event) => {
+                const tagDefinition = availableTags.find(
+                  (candidate) => candidate.tag === event.target.value
+                );
+                if (tagDefinition) {
+                  onChange(createTagReferenceForValue(value, tagDefinition));
+                  onSelectIndex(`tag:${tagDefinition.tag}`);
+                  setIsOpen(false);
+                }
+              }}
+            >
+              <option value="">Use existing tag</option>
+              {availableTags.map((tagDefinition) => (
+                <option key={tagDefinition.tag} value={tagDefinition.tag}>
+                  {tagDefinition.tag} ({tagDefinition.valueKind})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          className="icon-text-button subtle"
+          type="button"
+          disabled={!currentTag}
+          onClick={() => {
+            setTag("");
+            setIsOpen(false);
+          }}
+        >
+          Clear tag
+        </button>
+      </div>
+    </details>
+  );
+}
+
 function ValueBodyEditor(props: ValueEditorProps) {
-  const { value, onChange, availableIndexes, activeIndex, onSelectIndex } = props;
+  const { value, onChange, availableIndexes, availableTags, activeIndex, onSelectIndex } = props;
 
   if (value.kind === "atomic") {
     const valueSpec = props.featureSpec ? getFeatureValueSpec(props.featureSpec) : undefined;
@@ -588,6 +828,18 @@ function ValueBodyEditor(props: ValueEditorProps) {
     );
   }
 
+  if (value.kind === "tag-ref") {
+    return (
+      <button
+        className={`tag-pill${`tag:${value.tag}` === activeIndex ? " active" : ""}`}
+        type="button"
+        onClick={() => onSelectIndex(`tag:${value.tag}`)}
+      >
+        {value.tag}
+      </button>
+    );
+  }
+
   if (value.kind === "underspecified") {
     return <span className="underspecified">_</span>;
   }
@@ -611,13 +863,14 @@ function ValueBodyEditor(props: ValueEditorProps) {
                   })
                 }
                 availableIndexes={availableIndexes}
+                availableTags={availableTags}
                 activeIndex={activeIndex}
                 onSelectIndex={onSelectIndex}
                 rootStructure={props.rootStructure}
                 onRootChange={props.onRootChange}
               />
               <button
-                className="icon-button danger"
+                className="icon-button danger list-item-delete-button"
                 type="button"
                 title="Remove list item"
                 onClick={() =>
@@ -655,6 +908,7 @@ function ValueBodyEditor(props: ValueEditorProps) {
       structure={value.structure}
       onChange={(structure) => onChange({ ...value, structure })}
       availableIndexes={availableIndexes}
+      availableTags={availableTags}
       activeIndex={activeIndex}
       onSelectIndex={onSelectIndex}
       rootStructure={props.rootStructure}

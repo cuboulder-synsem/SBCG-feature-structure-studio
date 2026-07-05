@@ -51,6 +51,23 @@ describe("starter templates", () => {
     expect(latex).toContain("HITTER & \\ind{i}");
     expect(latex).toContain("HITTEE & \\ind{j}");
   });
+
+  it("uses typed CAT objects instead of HEAD features in templates", () => {
+    [...templates, ...examples].forEach((template) => {
+      expect(collectFeatureNames(template.structure), template.name).not.toContain("HEAD");
+    });
+
+    const verbLexeme = templates.find((candidate) => candidate.id === "verb-lexeme");
+    expect(findNestedFeatureStructureType(verbLexeme?.structure, "CAT")).toBe("verb");
+  });
+
+  it("keeps template VAL features as SYN-level lists", () => {
+    [...templates, ...examples].forEach((template) => {
+      collectFeatureValues(template.structure, "VAL").forEach((value) => {
+        expect(value.kind, template.name).toBe("list");
+      });
+    });
+  });
 });
 
 function expectTemplateStructureIsTyped(structure: FeatureStructure): void {
@@ -66,4 +83,66 @@ function expectTemplateValueIsTyped(value: FSValue): void {
   if (value.kind === "list") {
     value.items.forEach((item) => expectTemplateValueIsTyped(item));
   }
+}
+
+function collectFeatureNames(structure: FeatureStructure, names: string[] = []): string[] {
+  structure.features.forEach((feature) => {
+    names.push(feature.name);
+    if (feature.value.kind === "feature-structure") {
+      collectFeatureNames(feature.value.structure, names);
+    }
+    if (feature.value.kind === "list") {
+      feature.value.items.forEach((item) => {
+        if (item.kind === "feature-structure") {
+          collectFeatureNames(item.structure, names);
+        }
+      });
+    }
+  });
+  return names;
+}
+
+function findNestedFeatureStructureType(
+  structure: FeatureStructure | undefined,
+  featureName: string
+): string | undefined {
+  if (!structure) {
+    return undefined;
+  }
+
+  for (const feature of structure.features) {
+    if (feature.name === featureName && feature.value.kind === "feature-structure") {
+      return feature.value.structure.type;
+    }
+    if (feature.value.kind === "feature-structure") {
+      const nested = findNestedFeatureStructureType(feature.value.structure, featureName);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+  return undefined;
+}
+
+function collectFeatureValues(
+  structure: FeatureStructure,
+  featureName: string,
+  values: FSValue[] = []
+): FSValue[] {
+  structure.features.forEach((feature) => {
+    if (feature.name === featureName) {
+      values.push(feature.value);
+    }
+    if (feature.value.kind === "feature-structure") {
+      collectFeatureValues(feature.value.structure, featureName, values);
+    }
+    if (feature.value.kind === "list") {
+      feature.value.items.forEach((item) => {
+        if (item.kind === "feature-structure") {
+          collectFeatureValues(item.structure, featureName, values);
+        }
+      });
+    }
+  });
+  return values;
 }

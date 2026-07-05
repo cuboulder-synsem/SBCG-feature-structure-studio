@@ -29,4 +29,4 @@ Complex category with selection, external argument, and lexical identifier infor
 
 ## Notes
 
-Subtypes such as `verb` and `noun` inherit these category features.
+Subtypes such as `verb` and `noun` inherit these category features. In a `CAT` value, the object type itself states the category subtype, so the schema does not use a separate `HEAD` feature.

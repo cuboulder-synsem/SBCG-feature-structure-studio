@@ -41,6 +41,20 @@ describe("SBCG formalism inference", () => {
     ]);
   });
 
+  it("keeps nonlocal syntax features licensed but optional on syn-obj", () => {
+    const synObj = createFeatureStructure("syn-obj", [
+      createFeatureEntry("CAT", createValueForFeature("CAT")),
+      createFeatureEntry("VAL", createValueForFeature("VAL")),
+      createFeatureEntry("MRKG", createAtomicValue("unmk"))
+    ]);
+
+    expect(getMissingFeatureSuggestions(synObj).map((suggestion) => suggestion.name)).toEqual([
+      "GAP",
+      "WH",
+      "REL"
+    ]);
+  });
+
   it("accepts Sag's longer feature names as aliases", () => {
     const syntaxValue = createValueForFeature("SYNTAX");
     const semanticsValue = createValueForFeature("SEMANTICS");
@@ -127,19 +141,7 @@ describe("SBCG formalism inference", () => {
     const val = createValueForFeature("VAL");
 
     expect(argSt).toEqual({ kind: "list", items: [] });
-    expect(val.kind).toBe("feature-structure");
-    if (val.kind !== "feature-structure") {
-      throw new Error("Expected VAL to infer a valence object");
-    }
-    expect(val.structure.type).toBe("valence");
-    expect(val.structure.features.map((feature) => feature.name)).toEqual([
-      "SPR",
-      "SUBJ",
-      "COMPS"
-    ]);
-    val.structure.features.forEach((feature) => {
-      expect(feature.value).toEqual({ kind: "list", items: [] });
-    });
+    expect(val).toEqual({ kind: "list", items: [] });
   });
 
   it("infers inherited category features for verb", () => {
@@ -181,6 +183,33 @@ describe("SBCG formalism inference", () => {
 
     expect(vf?.value.kind).toBe("atomic");
     expect(custom?.value).toEqual(createAtomicValue("kept"));
+  });
+
+  it("retargets CAT values without keeping stale features from the previous category subtype", () => {
+    const verbCategory = retargetFeatureStructureType(
+      createFeatureStructure("category", [
+        createFeatureEntry("CUSTOM", createAtomicValue("kept"))
+      ]),
+      "verb"
+    );
+
+    const nounCategory = retargetFeatureStructureType(verbCategory, "noun");
+
+    expect(nounCategory.type).toBe("noun");
+    expect(nounCategory.features.map((feature) => feature.name)).toEqual([
+      "SELECT",
+      "XARG",
+      "LID",
+      "CASE",
+      "CUSTOM"
+    ]);
+    expect(nounCategory.features.some((feature) => feature.name === "AUX")).toBe(false);
+    expect(nounCategory.features.some((feature) => feature.name === "INV")).toBe(false);
+    expect(nounCategory.features.some((feature) => feature.name === "VF")).toBe(false);
+    expect(nounCategory.features.some((feature) => feature.name === "IC")).toBe(false);
+    expect(nounCategory.features.find((feature) => feature.name === "CUSTOM")?.value).toEqual(
+      createAtomicValue("kept")
+    );
   });
 
   it("returns missing feature suggestions without duplicating existing features", () => {
@@ -262,6 +291,22 @@ describe("SBCG formalism inference", () => {
       throw new Error("Expected CAT to create a typed feature structure");
     }
     expect(entry.value.structure.type).toBe("category");
+  });
+
+  it("creates VAL as a list from the licensed syn-obj feature spec", () => {
+    const valSpec = getFeatureSpecForType("syn-obj", "VAL");
+    if (!valSpec) {
+      throw new Error("Expected VAL spec");
+    }
+
+    expect(getFeatureValueSpec(valSpec)).toMatchObject({
+      kind: "list",
+      itemType: "expression"
+    });
+
+    const entry = createFeatureEntryFromSpec(valSpec);
+
+    expect(entry.value).toEqual({ kind: "list", items: [] });
   });
 
   it("creates frame feature structures as default items for FRAMES", () => {

@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   assignIndexToValue,
+  assignTagToValue,
+  collectTagDefinitions,
+  collectTagIds,
   createAtomicValue,
   createFeatureEntry,
   createFeatureStructure,
   createIndexRefValue,
   createListValue,
   createNestedFeatureStructureValue,
+  createTagReferenceForValue,
+  createTagRefValue,
   createTypeValue,
-  moveFeatureById,
-  moveFeatureToPosition,
   orderFeaturesCanonically,
   type IndexRegistry
 } from "../src/core/model";
@@ -62,6 +65,48 @@ describe("Feature Structure Studio core model", () => {
     expect(registry["1"]).toEqual(indexed);
   });
 
+  it("assigns HPSG tags separately from semantic indices", () => {
+    const list = assignTagToValue("L", createListValue([{ ...createTypeValue("NP"), indexId: "i" }]));
+    const ref = createTagRefValue("L");
+    const fs = createFeatureStructure("lexeme", [
+      createFeatureEntry("ARG-ST", list),
+      createFeatureEntry("VAL", ref)
+    ]);
+
+    expect(list.tag).toBe("L");
+    expect(list.items[0].indexId).toBe("i");
+    expect(ref.tag).toBe("L");
+    expect(collectTagIds(fs)).toEqual(["L"]);
+  });
+
+  it("classifies tag references by the object originally carrying the tag", () => {
+    const taggedArgument = { ...createTypeValue("NP"), tag: "1" };
+    const taggedList = assignTagToValue("L", createListValue([taggedArgument]));
+    const fs = createFeatureStructure("lexeme", [
+      createFeatureEntry("ARG-ST", taggedList)
+    ]);
+
+    expect(collectTagDefinitions(fs)).toEqual([
+      { tag: "L", valueKind: "list" },
+      { tag: "1", valueKind: "type" }
+    ]);
+  });
+
+  it("keeps list brackets when a list feature references an argument tag", () => {
+    const argumentTag = { tag: "1", valueKind: "type" } as const;
+    const listTag = { tag: "L", valueKind: "list" } as const;
+
+    const argumentReference = createTagReferenceForValue(createListValue([]), argumentTag);
+    const listReference = createTagReferenceForValue(createListValue([]), listTag);
+
+    expect(argumentReference.kind).toBe("list");
+    if (argumentReference.kind !== "list") {
+      throw new Error("Expected argument tag reference to stay inside a list");
+    }
+    expect(argumentReference.items).toEqual([createTagRefValue("1")]);
+    expect(listReference).toEqual(createTagRefValue("L"));
+  });
+
   it("exports systematic langsci-avm LaTeX", () => {
     const indexedNp = assignIndexToValue({}, "1", createTypeValue("NP"));
     const fs = createFeatureStructure("sign", [
@@ -90,6 +135,18 @@ describe("Feature Structure Studio core model", () => {
     expect(exportLangSciAvm(fs)).toContain("COMPS & < >");
   });
 
+  it("exports HPSG tags before the tagged object and bare tag references without list brackets", () => {
+    const fs = createFeatureStructure("lexeme", [
+      createFeatureEntry("ARG-ST", assignTagToValue("L", createListValue([createTypeValue("NP")]))),
+      createFeatureEntry("VAL", createTagRefValue("L"))
+    ]);
+    const latex = exportLangSciAvm(fs);
+
+    expect(latex).toContain("ARG-ST & \\boxed{\\mathit{L}}< NP >");
+    expect(latex).toContain("VAL & \\boxed{\\mathit{L}}");
+    expect(latex).not.toContain("VAL & < \\boxed{L} >");
+  });
+
   it("round-trips feature structures through JSON", () => {
     const fs = createFeatureStructure("lexeme", [
       createFeatureEntry("SEM", { kind: "underspecified" })
@@ -105,30 +162,6 @@ describe("Feature Structure Studio core model", () => {
     const node = createTreeNode("VP", [createTreeNode("V", [], avm)]);
 
     expect(node.children[0].avm?.type).toBe("word");
-  });
-
-  it("reorders feature entries by adjacent movement and target position", () => {
-    const phon = createFeatureEntry("PHON");
-    const syn = createFeatureEntry("SYN");
-    const sem = createFeatureEntry("SEM");
-    const fs = createFeatureStructure("sign", [phon, syn, sem]);
-
-    const movedUp = moveFeatureById(fs, sem.id, -1);
-    expect(movedUp.features.map((feature) => feature.name)).toEqual(["PHON", "SEM", "SYN"]);
-
-    const movedToFirst = moveFeatureToPosition(fs, sem.id, 1);
-    expect(movedToFirst.features.map((feature) => feature.name)).toEqual([
-      "SEM",
-      "PHON",
-      "SYN"
-    ]);
-
-    const movedPastEnd = moveFeatureToPosition(fs, phon.id, 99);
-    expect(movedPastEnd.features.map((feature) => feature.name)).toEqual([
-      "SYN",
-      "SEM",
-      "PHON"
-    ]);
   });
 
   it("can apply the canonical major-feature order while preserving other features", () => {

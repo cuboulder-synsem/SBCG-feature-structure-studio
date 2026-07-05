@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { FeatureStructure, FSValue } from "../core/model";
 
 interface AvmPreviewProps {
@@ -57,7 +58,7 @@ interface PreviewValueProps {
 }
 
 function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValueProps) {
-  const marker = value.indexId ? (
+  const subscriptMarker = value.indexId ? (
     <SubscriptIndex
       indexId={value.indexId}
       activeIndex={activeIndex}
@@ -66,34 +67,34 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
   ) : null;
 
   if (value.kind === "atomic") {
-    return (
+    return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
       <span className="preview-value">
         {value.value}
-        {marker}
+        {subscriptMarker}
       </span>
     );
   }
 
   if (value.kind === "type") {
-    return (
+    return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
       <span className="preview-value preview-type-value">
         {value.label || "type"}
-        {marker}
+        {subscriptMarker}
       </span>
     );
   }
 
   if (value.kind === "underspecified") {
-    return (
+    return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
       <span className="preview-value">
         _
-        {marker}
+        {subscriptMarker}
       </span>
     );
   }
 
   if (value.kind === "index-ref") {
-    return (
+    return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
       <span className="preview-value">
         <IndexValue
           indexId={value.indexId}
@@ -104,11 +105,17 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
     );
   }
 
+  if (value.kind === "tag-ref") {
+    return (
+      <TagBadge tag={value.tag} activeIndex={activeIndex} onSelectIndex={onSelectIndex} />
+    );
+  }
+
   if (value.kind === "list") {
     const listIsTall = containsTallListItem(value.items);
 
     if (!listIsTall) {
-      return (
+      return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
         <span className="preview-list preview-list-compact">
           <span>〈</span>
           {value.items.length > 0 && <span> </span>}
@@ -125,12 +132,12 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
           ))}
           {value.items.length > 0 && <span> </span>}
           <span>〉</span>
-          {marker}
+          {subscriptMarker}
         </span>
       );
     }
 
-    return (
+    return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
       <span className="preview-list preview-list-bracketed">
         <PreviewListFence side="left" />
         <span className="preview-list-content">
@@ -148,12 +155,12 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
           ))}
         </span>
         <PreviewListFence side="right" />
-        {marker}
+        {subscriptMarker}
       </span>
     );
   }
 
-  return (
+  return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
     <span className="preview-nested">
       <PreviewStructure
         structure={value.structure}
@@ -161,7 +168,25 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
         onSelectIndex={onSelectIndex}
         depth={depth + 1}
       />
-      {marker}
+      {subscriptMarker}
+    </span>
+  );
+}
+
+function renderTaggedValue(
+  tag: string | undefined,
+  activeIndex: string | undefined,
+  onSelectIndex: (indexId: string) => void,
+  value: ReactNode
+) {
+  if (!tag) {
+    return value;
+  }
+
+  return (
+    <span className="preview-tagged-value">
+      <TagBadge tag={tag} activeIndex={activeIndex} onSelectIndex={onSelectIndex} />
+      {value}
     </span>
   );
 }
@@ -185,6 +210,38 @@ function PreviewListFence({ side }: { side: "left" | "right" }) {
       aria-hidden="true"
     />
   );
+}
+
+function TagBadge({
+  tag,
+  activeIndex,
+  onSelectIndex
+}: {
+  tag: string;
+  activeIndex?: string;
+  onSelectIndex: (indexId: string) => void;
+}) {
+  const activeTag = `tag:${tag}`;
+  const tagShapeClass = isNumericTag(tag) ? "preview-tag-number" : "preview-tag-letter";
+
+  return (
+    <button
+      className={
+        activeIndex === activeTag
+          ? `preview-tag ${tagShapeClass} active`
+          : `preview-tag ${tagShapeClass}`
+      }
+      type="button"
+      onClick={() => onSelectIndex(activeTag)}
+      title={`Highlight tag ${tag}`}
+    >
+      {tag}
+    </button>
+  );
+}
+
+function isNumericTag(tag: string): boolean {
+  return /^[0-9]+$/.test(tag);
 }
 
 function IndexValue({

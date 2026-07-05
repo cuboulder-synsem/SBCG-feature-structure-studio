@@ -31,17 +31,8 @@
                 "kind": "feature-structure",
                 "structure": {
                   "id": "verb-lexeme-cat-fs",
-                  "type": "category",
-                  "features": [
-                    {
-                      "id": "verb-lexeme-head",
-                      "name": "HEAD",
-                      "value": {
-                        "kind": "type",
-                        "label": "verb"
-                      }
-                    }
-                  ]
+                  "type": "verb",
+                  "features": []
                 }
               }
             }

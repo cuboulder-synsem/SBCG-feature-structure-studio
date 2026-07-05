@@ -95,49 +95,19 @@
               "id": "hit-val",
               "name": "VAL",
               "value": {
-                "kind": "feature-structure",
-                "structure": {
-                  "id": "hit-val-fs",
-                  "type": "valence",
-                  "features": [
-                    {
-                      "id": "hit-spr",
-                      "name": "SPR",
-                      "value": {
-                        "kind": "list",
-                        "items": []
-                      }
-                    },
-                    {
-                      "id": "hit-subj",
-                      "name": "SUBJ",
-                      "value": {
-                        "kind": "list",
-                        "items": [
-                          {
-                            "kind": "type",
-                            "label": "NP",
-                            "indexId": "i"
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "id": "hit-comps",
-                      "name": "COMPS",
-                      "value": {
-                        "kind": "list",
-                        "items": [
-                          {
-                            "kind": "type",
-                            "label": "NP",
-                            "indexId": "j"
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                }
+                "kind": "list",
+                "items": [
+                  {
+                    "kind": "type",
+                    "label": "NP",
+                    "indexId": "i"
+                  },
+                  {
+                    "kind": "type",
+                    "label": "NP",
+                    "indexId": "j"
+                  }
+                ]
               }
             },
             {

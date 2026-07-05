@@ -7,6 +7,7 @@ describe("Feature Structure Studio app", () => {
     const markup = renderToStaticMarkup(<App />);
 
     expect(markup).toContain("Download Paper View PNG");
+    expect(markup).toContain("paper-preview-column");
     expect(markup).toContain("PNG");
   });
 

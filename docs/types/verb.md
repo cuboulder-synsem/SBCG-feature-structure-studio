@@ -12,6 +12,11 @@ Verb category subtype.
 
 | Feature | Expected value |
 | --- | --- |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
+| VF | vform |
+| IC | boolean |
 | AUX | boolean |
 | INV | boolean |
 
@@ -29,4 +34,4 @@ Verb category subtype.
 
 ## Notes
 
-The editor obtains inherited category and verbal features from the type registry.
+The editor obtains inherited category and verbal features from the type registry. `AUX` and `INV` are appropriate for `verb`, not for `noun`.

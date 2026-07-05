@@ -12,7 +12,9 @@ Adjective category subtype.
 
 | Feature | Expected value |
 | --- | --- |
-| (none) | - |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 
 ## Example JSON
 
@@ -25,4 +27,4 @@ Adjective category subtype.
 
 ## Notes
 
-The type currently relies on inherited nonverbal/category geometry.
+The type relies on inherited nonverbal/category geometry and does not license noun-only `CASE` or verb-only `AUX`/`INV`.

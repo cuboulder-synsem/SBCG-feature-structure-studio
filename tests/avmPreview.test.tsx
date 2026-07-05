@@ -8,6 +8,7 @@ import {
   createIndexRefValue,
   createListValue,
   createNestedFeatureStructureValue,
+  createTagRefValue,
   createTypeValue
 } from "../src/core/model";
 
@@ -72,6 +73,70 @@ describe("AVM preview brackets", () => {
     expect(markup).toContain("preview-index-value");
     expect(markup).toContain("preview-index-subscript");
     expect(markup).toContain("<sub>i</sub>");
+  });
+
+  it("renders HPSG tags as boxed labels before their tagged reference", () => {
+    const structure = createFeatureStructure("verb", [
+      createFeatureEntry(
+        "ARG-ST",
+        createListValue([{ ...createTypeValue("NP"), indexId: "i", tag: "1" }])
+      )
+    ]);
+
+    const markup = renderToStaticMarkup(
+      <AvmPreview structure={structure} onSelectIndex={() => undefined} />
+    );
+    const openBracket = markup.indexOf("〈");
+    const tag = markup.indexOf("preview-tag");
+    const np = markup.indexOf("NP");
+    const closeBracket = markup.indexOf("〉");
+
+    expect(markup).toContain("preview-tag");
+    expect(openBracket).toBeLessThan(tag);
+    expect(tag).toBeLessThan(np);
+    expect(np).toBeLessThan(closeBracket);
+    expect(markup).toContain("<sub>i</sub>");
+  });
+
+  it("renders numeric tags upright and alphabetic tags italicized", () => {
+    const structure = createFeatureStructure("lexeme", [
+      createFeatureEntry("ARG-ST", createListValue([{ ...createTypeValue("NP"), tag: "1" }])),
+      createFeatureEntry("VAL", createTagRefValue("L"))
+    ]);
+
+    const markup = renderToStaticMarkup(
+      <AvmPreview structure={structure} onSelectIndex={() => undefined} />
+    );
+    const stylesCss = readFileSync("src/styles.css", "utf8");
+    const numberRule = stylesCss.match(/\.preview-tag-number\s*\{[^}]+\}/)?.[0] ?? "";
+    const letterRule = stylesCss.match(/\.preview-tag-letter\s*\{[^}]+\}/)?.[0] ?? "";
+
+    expect(markup).toContain("preview-tag-number");
+    expect(markup).toContain("preview-tag-letter");
+    expect(numberRule).toContain("font-style: normal");
+    expect(letterRule).toContain("font-style: italic");
+  });
+
+  it("renders list tag references as bare boxed tags without angle brackets", () => {
+    const structure = createFeatureStructure("lexeme", [
+      createFeatureEntry("ARG-ST", { ...createListValue([createTypeValue("NP")]), tag: "L" }),
+      createFeatureEntry("VAL", createTagRefValue("L"))
+    ]);
+
+    const markup = renderToStaticMarkup(
+      <AvmPreview structure={structure} onSelectIndex={() => undefined} />
+    );
+    const argSt = markup.indexOf("ARG-ST");
+    const taggedList = markup.indexOf("preview-tag", argSt);
+    const openBracket = markup.indexOf("〈", taggedList);
+    const val = markup.indexOf("VAL");
+    const bareTag = markup.indexOf("preview-tag", val);
+    const nextOpenBracket = markup.indexOf("〈", bareTag);
+
+    expect(taggedList).toBeGreaterThan(argSt);
+    expect(openBracket).toBeGreaterThan(taggedList);
+    expect(bareTag).toBeGreaterThan(val);
+    expect(nextOpenBracket === -1 || nextOpenBracket < 0).toBe(true);
   });
 
   it("keeps angle brackets compact for simple atomic lists", () => {

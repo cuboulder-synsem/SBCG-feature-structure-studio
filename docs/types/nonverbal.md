@@ -12,7 +12,9 @@ Nonverbal category supertype.
 
 | Feature | Expected value |
 | --- | --- |
-| (none) | - |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 
 ## Example JSON
 
@@ -25,4 +27,4 @@ Nonverbal category supertype.
 
 ## Notes
 
-Nouns, prepositions, adjectives, and adverbs inherit category geometry through this type.
+Nouns, prepositions, adjectives, and adverbs inherit category geometry through this type. Nonverbal CAT values do not license verbal features such as `VF`, `IC`, `AUX`, or `INV`.

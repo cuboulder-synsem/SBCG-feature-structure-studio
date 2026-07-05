@@ -16,19 +16,22 @@ function renderStructure(structure: FeatureStructure, level: number): string {
 
 function renderValue(value: FSValue, level: number): string {
   const index = value.indexId ? subscript(value.indexId) : "";
+  const tag = value.tag ? `[${value.tag}]` : "";
   switch (value.kind) {
     case "atomic":
-      return `${value.value}${index}`;
+      return `${tag}${value.value}${index}`;
     case "type":
-      return `${value.label}${index}`;
+      return `${tag}${value.label}${index}`;
     case "list":
-      return `< ${value.items.map((item) => renderValue(item, level)).join(", ")} >${index}`;
+      return `${tag}< ${value.items.map((item) => renderValue(item, level)).join(", ")} >${index}`;
     case "feature-structure":
-      return `\n${renderStructure(value.structure, level)}${index}`;
+      return `${tag}\n${renderStructure(value.structure, level)}${index}`;
     case "index-ref":
-      return `#${value.indexId}`;
+      return `${tag}#${value.indexId}`;
+    case "tag-ref":
+      return `[${value.tag}]`;
     case "underspecified":
-      return `_${index}`;
+      return `${tag}_${index}`;
   }
 }
 

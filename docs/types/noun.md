@@ -12,6 +12,9 @@ Noun category subtype with English case.
 
 | Feature | Expected value |
 | --- | --- |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 | CASE | case |
 
 ## Example JSON
@@ -27,4 +30,4 @@ Noun category subtype with English case.
 
 ## Notes
 
-`CASE` is an atomic dropdown value supplied by the registry.
+`CASE` is an atomic dropdown value supplied by the registry. Noun CAT values do not license verbal features such as `VF`, `IC`, `AUX`, or `INV`.

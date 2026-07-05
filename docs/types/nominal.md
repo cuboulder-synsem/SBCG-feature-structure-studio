@@ -12,7 +12,9 @@ Nominal category supertype.
 
 | Feature | Expected value |
 | --- | --- |
-| (none) | - |
+| SELECT | sign-or-none |
+| XARG | sign-or-none |
+| LID | list(frame) |
 
 ## Example JSON
 
@@ -25,4 +27,4 @@ Nominal category supertype.
 
 ## Notes
 
-Nominal types inherit nonverbal/category features.
+Nominal types inherit nonverbal/category features. `noun` adds `CASE`; `prep` does not add the verb-only features.

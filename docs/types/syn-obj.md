@@ -6,7 +6,8 @@ object.
 
 ## Description
 
-Syntax object containing category, valence, and marking information.
+Syntax object containing category, valence, marking, and optional nonlocal information.
+`CAT`, `VAL`, `MRKG`, `GAP`, `WH`, and `REL` are parallel features of the syntax object. The initial scaffold shows `CAT`, `VAL`, and `MRKG`; `GAP`, `WH`, and `REL` remain licensed Add Feature options.
 
 ## Licensed features
 
@@ -15,6 +16,9 @@ Syntax object containing category, valence, and marking information.
 | CAT | category |
 | VAL | list(expression) |
 | MRKG | mark |
+| GAP | list(expression) |
+| WH | set(expression) |
+| REL | set(expression) |
 
 ## Example JSON
 
@@ -29,4 +33,4 @@ Syntax object containing category, valence, and marking information.
 
 ## Notes
 
-Selecting `CAT` automatically creates a typed `category` value.
+Selecting `CAT` automatically creates a typed category value. The category subtype is represented by the nested object's type label, such as `verb` or `noun`; no separate `HEAD` feature is needed. `GAP`, `WH`, and `REL` are optional nonlocal syntax features.

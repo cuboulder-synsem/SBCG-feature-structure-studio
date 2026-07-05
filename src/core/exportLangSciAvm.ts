@@ -30,10 +30,14 @@ function renderStructure(structure: FeatureStructure, level: number, indentSize:
 
 function renderValue(value: FSValue, level: number, indentSize: number): string {
   const rendered = renderValueBody(value, level, indentSize);
-  if (value.kind !== "index-ref" && value.indexId) {
-    return `${rendered}\\ind{${escapeLatex(value.indexId)}}`;
+  if (value.kind === "tag-ref") {
+    return rendered;
   }
-  return rendered;
+  const tagged = value.tag ? `${renderTag(value.tag)}${rendered}` : rendered;
+  if (value.kind !== "index-ref" && value.indexId) {
+    return `${tagged}\\ind{${escapeLatex(value.indexId)}}`;
+  }
+  return tagged;
 }
 
 function renderValueBody(value: FSValue, level: number, indentSize: number): string {
@@ -50,9 +54,18 @@ function renderValueBody(value: FSValue, level: number, indentSize: number): str
       return `\n${renderStructure(value.structure, level, indentSize)}`;
     case "index-ref":
       return `\\ind{${escapeLatex(value.indexId)}}`;
+    case "tag-ref":
+      return renderTag(value.tag);
     case "underspecified":
       return "\\_";
   }
+}
+
+function renderTag(tag: string): string {
+  if (/^[0-9]+$/.test(tag)) {
+    return `\\boxed{${escapeLatex(tag)}}`;
+  }
+  return `\\boxed{\\mathit{${escapeLatex(tag)}}}`;
 }
 
 function escapeLatex(input: string): string {

@@ -44,13 +44,13 @@ The app does not fill `ARG-ST` with `NP` values automatically. Sag uses examples
 
 ## Syntax Object Geometry
 
-Sag defines `SYN` as a `syn-obj`. Section 3 introduces three core features:
+Sag defines `SYN` as a `syn-obj`. Section 3 introduces three core features for the initial scaffold:
 
 - `CAT : category`
 - `VAL : list(expression)`
 - `MRKG : mark`
 
-So typing `SYN` or `SYNTAX` into a blank feature row infers a nested `syn-obj` AVM with those features. `GAP`, `WH`, and `REL` are noted as further syntax-object features in Section 3, but the chapter discusses them later; they should be treated as advanced/nonlocal extensions rather than default Section 3 syntax geometry.
+So typing `SYN` or `SYNTAX` into a blank feature row infers a nested `syn-obj` AVM with those features. `GAP`, `WH`, and `REL` are also licensed sibling features of `syn-obj`, but they remain optional Add Feature choices so the default view stays compact.
 
 ## Category Geometry
 
@@ -63,7 +63,7 @@ The app currently models:
 - `verb`: inherits `verbal`, adds `AUX`, `INV`
 - `noun`: inherits `nominal`, adds `CASE`
 
-This lets users type `verb` as a type and fill the appropriate category features without inventing actual values.
+This lets users type `verb` or `noun` directly as the type of the `CAT` value. The type label in the upper-left of that feature structure is the head/category subtype; the app does not add a separate `HEAD` feature for this. Retargeting a CAT value prunes stale schema-known features that are no longer appropriate, so changing `verb` to `noun` keeps `SELECT`, `XARG`, `LID`, and `CASE`, but removes `VF`, `IC`, `AUX`, and `INV`. User-created custom feature names that are not part of the schema are preserved.
 
 ## Semantics Geometry
 
@@ -106,6 +106,8 @@ The inference layer may add:
 - inherited features from supertypes
 - nested AVMs for known feature value types
 - empty lists or underspecified placeholders for expected list/set/value positions
+
+The editor always permits a custom feature as an escape hatch. Custom features are not treated as licensed by Sag's signature, but they are useful for exploratory analysis, local extensions, and future schema growth.
 
 The inference layer must not guess:
 

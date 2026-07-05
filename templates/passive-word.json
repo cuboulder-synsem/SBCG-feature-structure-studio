@@ -31,52 +31,23 @@
                 "kind": "feature-structure",
                 "structure": {
                   "id": "passive-cat-fs",
-                  "type": "category",
-                  "features": [
-                    {
-                      "id": "passive-head",
-                      "name": "HEAD",
-                      "value": {
-                        "kind": "type",
-                        "label": "verb"
-                      }
-                    },
-                    {
-                      "id": "passive-val",
-                      "name": "VAL",
-                      "value": {
-                        "kind": "feature-structure",
-                        "structure": {
-                          "id": "passive-val-fs",
-                          "type": "valence",
-                          "features": [
-                            {
-                              "id": "passive-subj",
-                              "name": "SUBJ",
-                              "value": {
-                                "kind": "list",
-                                "items": [
-                                  {
-                                    "kind": "index-ref",
-                                    "indexId": "2"
-                                  }
-                                ]
-                              }
-                            },
-                            {
-                              "id": "passive-comps",
-                              "name": "COMPS",
-                              "value": {
-                                "kind": "list",
-                                "items": []
-                              }
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ]
+                  "type": "verb",
+                  "features": []
                 }
+              }
+            },
+            {
+              "id": "passive-val",
+              "name": "VAL",
+              "value": {
+                "kind": "list",
+                "items": [
+                  {
+                    "kind": "type",
+                    "label": "NP",
+                    "indexId": "2"
+                  }
+                ]
               }
             }
           ]

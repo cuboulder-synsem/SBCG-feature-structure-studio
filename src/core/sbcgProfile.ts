@@ -45,6 +45,7 @@ export interface SbcgFeatureSpec {
   shape: ValueShape;
   description: string;
   atomicValues?: string[];
+  defaultIncluded?: boolean;
 }
 
 export interface SbcgTypeSpec {
@@ -187,8 +188,17 @@ export const sbcgTypes: Record<string, SbcgTypeSpec> = {
     description: "Sag Section 3 syntax object with category, valence, and marking.",
     features: [
       feature("CAT", "category", "feature-structure", "Complex grammatical category."),
-      feature("VAL", "valence", "feature-structure", "Locally unsaturated valents."),
-      feature("MRKG", "mark", "atomic", "Marking value such as unmk, def, det, than, as, or of.")
+      feature("VAL", "list(expression)", "list", "Locally unsaturated valents."),
+      feature("MRKG", "mark", "atomic", "Marking value such as unmk, def, det, than, as, or of."),
+      feature("GAP", "list(expression)", "list", "Nonlocal syntax gap list.", {
+        defaultIncluded: false
+      }),
+      feature("WH", "set(expression)", "set", "Nonlocal wh/exclamative set.", {
+        defaultIncluded: false
+      }),
+      feature("REL", "set(expression)", "set", "Nonlocal relative set.", {
+        defaultIncluded: false
+      })
     ]
   },
   valence: {
@@ -358,9 +368,17 @@ function feature(
   name: string,
   valueType: string,
   shape: ValueShape,
-  description: string
+  description: string,
+  options: Pick<SbcgFeatureSpec, "defaultIncluded"> = {}
 ): SbcgFeatureSpec {
-  return { name, valueType, shape, description, atomicValues: atomicDomains[valueType] };
+  return {
+    name,
+    valueType,
+    shape,
+    description,
+    atomicValues: atomicDomains[valueType],
+    ...options
+  };
 }
 
 export function normalizeSbcgType(type?: string): string | undefined {
@@ -445,9 +463,9 @@ export function getMissingFeatureSuggestions(structure: FeatureStructure): Featu
 }
 
 export function applySbcgProfile(structure: FeatureStructure): FeatureStructure {
-  const missingFeatures = getMissingFeatureSuggestions(structure).map((suggestion) =>
-    createFeatureEntryFromSpec(suggestion)
-  );
+  const missingFeatures = getMissingFeatureSuggestions(structure)
+    .filter(isDefaultIncludedFeature)
+    .map((suggestion) => createFeatureEntryFromSpec(suggestion));
   return {
     ...structure,
     type: normalizeSbcgType(structure.type) ?? structure.type,
@@ -466,7 +484,7 @@ export function retargetFeatureStructureType(
   };
   const licensedFeatures = getFeatureSuggestionsForType(normalizedType);
 
-  if (!normalizedType || licensedFeatures.length === 0) {
+  if (!normalizedType || !getSbcgTypeSpec(normalizedType)) {
     return typedStructure;
   }
 
@@ -566,20 +584,32 @@ function mergeFeaturesIntoLicensedDomain(
   });
 
   const consumedFeatureIds = new Set<string>();
-  const domainFeatures = licensedFeatures.map((licensedFeature) => {
+  const domainFeatures = licensedFeatures.flatMap((licensedFeature) => {
     const existing = existingByFeatureName.get(licensedFeature.name);
     if (!existing) {
-      return createFeatureEntryFromSpec(licensedFeature);
+      return isDefaultIncludedFeature(licensedFeature)
+        ? [createFeatureEntryFromSpec(licensedFeature)]
+        : [];
     }
 
     consumedFeatureIds.add(existing.id);
-    return alignExistingFeatureWithSpec(existing, licensedFeature);
+    return [alignExistingFeatureWithSpec(existing, licensedFeature)];
   });
   const extraFeatures = existingFeatures.filter(
-    (featureEntry) => !consumedFeatureIds.has(featureEntry.id)
+    (featureEntry) =>
+      !consumedFeatureIds.has(featureEntry.id) &&
+      !isKnownSchemaFeature(featureEntry.name)
   );
 
   return orderFeaturesCanonically([...domainFeatures, ...extraFeatures]);
+}
+
+function isDefaultIncludedFeature(featureSpec: SbcgFeatureSpec): boolean {
+  return featureSpec.defaultIncluded ?? true;
+}
+
+function isKnownSchemaFeature(featureName: string): boolean {
+  return Boolean(featureSpecsByName[normalizeFeatureName(featureName)]);
 }
 
 function alignExistingFeatureWithSpec(

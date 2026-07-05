@@ -12,11 +12,17 @@ import type { ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
 import { AvmPreview } from "../components/AvmPreview";
 import { FeatureStructureEditor } from "../components/FeatureStructureEditor";
+import { TagLegend } from "../components/TagLegend";
 import { TreeEditor, TreePreview } from "../components/TreeEditor";
 import { exportLangSciAvm } from "../core/exportLangSciAvm";
 import { downloadElementAsPng } from "../core/exportPng";
 import { exportJson, importJson } from "../core/importExportJson";
-import { collectIndexIds, createInitialSign, type FeatureStructure } from "../core/model";
+import {
+  collectIndexIds,
+  collectTagDefinitions,
+  createInitialSign,
+  type FeatureStructure
+} from "../core/model";
 import { createInitialTree, type TreeNode } from "../core/treeModel";
 import { examples, templates, type TemplateDefinition } from "../templates";
 
@@ -32,6 +38,7 @@ export function App() {
   const paperViewRef = useRef<HTMLDivElement>(null);
 
   const availableIndexes = useMemo(() => collectIndexIds(structure), [structure]);
+  const availableTags = useMemo(() => collectTagDefinitions(structure), [structure]);
   const latex = useMemo(() => exportLangSciAvm(structure), [structure]);
   const avmJson = useMemo(() => exportJson(structure), [structure]);
   const treeJson = useMemo(() => exportJson(tree), [tree]);
@@ -175,12 +182,13 @@ export function App() {
                 structure={structure}
                 onChange={setStructure}
                 availableIndexes={availableIndexes}
+                availableTags={availableTags}
                 activeIndex={activeIndex}
                 onSelectIndex={setActiveIndex}
               />
             </div>
 
-            <div className="workspace-column preview-column">
+            <div className="workspace-column preview-column paper-preview-column">
               <div className="column-title-row">
                 <h2>Paper View</h2>
                 <button
@@ -200,6 +208,7 @@ export function App() {
                   onSelectIndex={setActiveIndex}
                 />
               </div>
+              <TagLegend tags={availableTags} />
             </div>
           </section>
           <AvmUtilityBand

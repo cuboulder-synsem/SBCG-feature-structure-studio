@@ -4,11 +4,13 @@ export type ValueKind =
   | "list"
   | "feature-structure"
   | "index-ref"
+  | "tag-ref"
   | "underspecified";
 
 interface BaseValue {
   kind: ValueKind;
   indexId?: string;
+  tag?: string;
 }
 
 export interface AtomicValue extends BaseValue {
@@ -36,6 +38,11 @@ export interface IndexRefValue extends BaseValue {
   indexId: string;
 }
 
+export interface TagRefValue extends BaseValue {
+  kind: "tag-ref";
+  tag: string;
+}
+
 export interface UnderspecifiedValue extends BaseValue {
   kind: "underspecified";
 }
@@ -46,6 +53,7 @@ export type FSValue =
   | ListValue
   | FeatureStructureValue
   | IndexRefValue
+  | TagRefValue
   | UnderspecifiedValue;
 
 export interface FeatureStructure {
@@ -62,6 +70,11 @@ export interface FeatureEntry {
 
 export interface IndexRegistry {
   [indexId: string]: FSValue;
+}
+
+export interface TagDefinition {
+  tag: string;
+  valueKind: ValueKind;
 }
 
 export const canonicalMajorFeatureOrder = ["PHON", "FORM", "SYN", "ARG-ST", "SEM", "CNTXT"] as const;
@@ -93,6 +106,26 @@ export function createNestedFeatureStructureValue(
 
 export function createIndexRefValue(indexId: string): IndexRefValue {
   return { kind: "index-ref", indexId };
+}
+
+export function createTagRefValue(tag: string): TagRefValue {
+  return { kind: "tag-ref", tag };
+}
+
+export function createTagReferenceForValue(
+  currentValue: FSValue,
+  tagDefinition: TagDefinition
+): FSValue {
+  const reference = createTagRefValue(tagDefinition.tag);
+  if (currentValue.kind === "list" && tagDefinition.valueKind !== "list") {
+    return {
+      ...currentValue,
+      tag: undefined,
+      indexId: undefined,
+      items: [reference]
+    };
+  }
+  return reference;
 }
 
 export function createUnderspecifiedValue(): UnderspecifiedValue {
@@ -137,6 +170,10 @@ export function assignIndexToValue<T extends FSValue>(
   return indexed;
 }
 
+export function assignTagToValue<T extends FSValue>(tag: string, value: T): T {
+  return { ...value, tag } as T;
+}
+
 export function cloneValue(value: FSValue): FSValue {
   return structuredClone(value) as FSValue;
 }
@@ -153,6 +190,8 @@ export function defaultValueForKind(kind: ValueKind): FSValue {
       return createNestedFeatureStructureValue(createFeatureStructure());
     case "index-ref":
       return createIndexRefValue("1");
+    case "tag-ref":
+      return createTagRefValue("1");
     case "underspecified":
       return createUnderspecifiedValue();
   }
@@ -178,6 +217,58 @@ export function collectIndexIds(structure: FeatureStructure): string[] {
   const ids = new Set<string>();
   structure.features.forEach((feature) => collectIndexIdsFromValue(feature.value, ids));
   return [...ids].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+export function collectTagIdsFromValue(value: FSValue, ids = new Set<string>()): Set<string> {
+  if (value.tag) {
+    ids.add(value.tag);
+  }
+
+  if (value.kind === "list") {
+    value.items.forEach((item) => collectTagIdsFromValue(item, ids));
+  }
+
+  if (value.kind === "feature-structure") {
+    value.structure.features.forEach((feature) => collectTagIdsFromValue(feature.value, ids));
+  }
+
+  return ids;
+}
+
+export function collectTagIds(structure: FeatureStructure): string[] {
+  const ids = new Set<string>();
+  structure.features.forEach((feature) => collectTagIdsFromValue(feature.value, ids));
+  return [...ids].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+export function collectTagDefinitionsFromValue(
+  value: FSValue,
+  definitions = new Map<string, TagDefinition>()
+): Map<string, TagDefinition> {
+  if (value.kind !== "tag-ref" && value.tag && !definitions.has(value.tag)) {
+    definitions.set(value.tag, {
+      tag: value.tag,
+      valueKind: value.kind
+    });
+  }
+
+  if (value.kind === "list") {
+    value.items.forEach((item) => collectTagDefinitionsFromValue(item, definitions));
+  }
+
+  if (value.kind === "feature-structure") {
+    value.structure.features.forEach((feature) =>
+      collectTagDefinitionsFromValue(feature.value, definitions)
+    );
+  }
+
+  return definitions;
+}
+
+export function collectTagDefinitions(structure: FeatureStructure): TagDefinition[] {
+  const definitions = new Map<string, TagDefinition>();
+  structure.features.forEach((feature) => collectTagDefinitionsFromValue(feature.value, definitions));
+  return [...definitions.values()];
 }
 
 export function orderFeaturesCanonically(features: FeatureEntry[]): FeatureEntry[] {
@@ -230,44 +321,4 @@ function normalizeCanonicalFeatureName(featureName: string): string {
     return "ARG-ST";
   }
   return normalized;
-}
-
-export function moveFeatureById(
-  structure: FeatureStructure,
-  featureId: string,
-  delta: -1 | 1
-): FeatureStructure {
-  const currentIndex = structure.features.findIndex((feature) => feature.id === featureId);
-  if (currentIndex < 0) {
-    return structure;
-  }
-  return moveFeatureToIndex(structure, currentIndex, currentIndex + delta);
-}
-
-export function moveFeatureToPosition(
-  structure: FeatureStructure,
-  featureId: string,
-  position: number
-): FeatureStructure {
-  const currentIndex = structure.features.findIndex((feature) => feature.id === featureId);
-  if (currentIndex < 0) {
-    return structure;
-  }
-  return moveFeatureToIndex(structure, currentIndex, position - 1);
-}
-
-function moveFeatureToIndex(
-  structure: FeatureStructure,
-  currentIndex: number,
-  targetIndex: number
-): FeatureStructure {
-  const clampedTarget = Math.min(Math.max(targetIndex, 0), structure.features.length - 1);
-  if (currentIndex === clampedTarget) {
-    return structure;
-  }
-
-  const features = [...structure.features];
-  const [movedFeature] = features.splice(currentIndex, 1);
-  features.splice(clampedTarget, 0, movedFeature);
-  return { ...structure, features };
 }
