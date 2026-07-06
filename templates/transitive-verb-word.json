@@ -3,8 +3,8 @@
   "type": "word",
   "features": [
     {
-      "id": "tvw-phon",
-      "name": "PHON",
+      "id": "tvw-form",
+      "name": "FORM",
       "value": {
         "kind": "list",
         "items": [
@@ -32,7 +32,62 @@
                 "structure": {
                   "id": "tvw-cat-fs",
                   "type": "verb",
-                  "features": []
+                  "features": [
+                    {
+                      "id": "tvw-select",
+                      "name": "SELECT",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "tvw-xarg",
+                      "name": "XARG",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "tvw-lid",
+                      "name": "LID",
+                      "value": {
+                        "kind": "list",
+                        "items": []
+                      }
+                    },
+                    {
+                      "id": "tvw-vf",
+                      "name": "VF",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "fin"
+                      }
+                    },
+                    {
+                      "id": "tvw-ic",
+                      "name": "IC",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "+"
+                      }
+                    },
+                    {
+                      "id": "tvw-aux",
+                      "name": "AUX",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "-"
+                      }
+                    },
+                    {
+                      "id": "tvw-inv",
+                      "name": "INV",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "-"
+                      }
+                    }
+                  ]
                 }
               }
             },
@@ -53,6 +108,14 @@
                     "indexId": "2"
                   }
                 ]
+              }
+            },
+            {
+              "id": "tvw-mrkg",
+              "name": "MRKG",
+              "value": {
+                "kind": "atomic",
+                "value": "unmk"
               }
             }
           ]
@@ -76,6 +139,43 @@
             "indexId": "2"
           }
         ]
+      }
+    },
+    {
+      "id": "tvw-sem",
+      "name": "SEM",
+      "value": {
+        "kind": "feature-structure",
+        "structure": {
+          "id": "tvw-sem-fs",
+          "type": "sem-obj",
+          "features": [
+            {
+              "id": "tvw-index",
+              "name": "INDEX",
+              "value": {
+                "kind": "atomic",
+                "value": "s"
+              }
+            },
+            {
+              "id": "tvw-ltop",
+              "name": "LTOP",
+              "value": {
+                "kind": "atomic",
+                "value": "l0"
+              }
+            },
+            {
+              "id": "tvw-frames",
+              "name": "FRAMES",
+              "value": {
+                "kind": "list",
+                "items": []
+              }
+            }
+          ]
+        }
       }
     }
   ]

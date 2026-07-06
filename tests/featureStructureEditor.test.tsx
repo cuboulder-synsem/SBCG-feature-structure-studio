@@ -5,8 +5,11 @@ import { describe, expect, it } from "vitest";
 import { FeatureStructureEditor } from "../src/components/FeatureStructureEditor";
 import {
   collectIndexIds,
+  createIndexRefValue,
   createFeatureEntry,
   createFeatureStructure,
+  createListValue,
+  createNestedFeatureStructureValue,
   createTypeValue
 } from "../src/core/model";
 import {
@@ -315,5 +318,131 @@ describe("FeatureStructureEditor type-driven controls", () => {
       root.unmount();
     });
     host.remove();
+  });
+
+  it("offers collapse controls for structured features in the first two layers", () => {
+    const structure = createFeatureStructure("sign", [
+      createFeatureEntry(
+        "SYN",
+        createNestedFeatureStructureValue(
+          createFeatureStructure("syn-obj", [
+            createFeatureEntry(
+              "CAT",
+              createNestedFeatureStructureValue(createFeatureStructure("verb"))
+            )
+          ])
+        )
+      ),
+      createFeatureEntry(
+        "SEM",
+        createNestedFeatureStructureValue(
+          createFeatureStructure("sem-obj", [
+            createFeatureEntry(
+              "FRAMES",
+              createListValue([
+                createNestedFeatureStructureValue(
+                  createFeatureStructure("hitting-frame", [
+                    createFeatureEntry("HITTER", createIndexRefValue("i"))
+                  ])
+                )
+              ])
+            )
+          ])
+        )
+      )
+    ]);
+
+    const markup = renderToStaticMarkup(
+      <FeatureStructureEditor
+        structure={structure}
+        onChange={() => undefined}
+        availableIndexes={collectIndexIds(structure)}
+        onSelectIndex={() => undefined}
+      />
+    );
+
+    expect(markup).toContain('aria-label="Collapse SYN"');
+    expect(markup).toContain('aria-label="Collapse SEM"');
+    expect(markup).toContain('aria-label="Collapse CAT"');
+    expect(markup).toContain('aria-label="Collapse FRAMES"');
+    expect(markup).not.toContain('aria-label="Collapse HITTER"');
+  });
+
+  it("collapses and expands top-layer structured feature rows", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const structure = createFeatureStructure("sign", [
+      createFeatureEntry(
+        "SYN",
+        createNestedFeatureStructureValue(
+          createFeatureStructure("syn-obj", [
+            createFeatureEntry("CAT", createTypeValue("verb"))
+          ])
+        )
+      )
+    ]);
+
+    await act(async () => {
+      root.render(
+        <FeatureStructureEditor
+          structure={structure}
+          onChange={() => undefined}
+          availableIndexes={collectIndexIds(structure)}
+          onSelectIndex={() => undefined}
+        />
+      );
+    });
+
+    const collapseSyn = host.querySelector<HTMLButtonElement>('button[aria-label="Collapse SYN"]');
+    expect(collapseSyn).not.toBeNull();
+    expect(host.querySelector('[data-editor-feature-name="CAT"]')).not.toBeNull();
+
+    await act(async () => {
+      collapseSyn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(host.querySelector('button[aria-label="Expand SYN"]')).not.toBeNull();
+    expect(host.querySelector('[data-editor-feature-name="CAT"]')).toBeNull();
+    expect(host.textContent).toContain("syn-obj collapsed");
+
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('button[aria-label="Expand SYN"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(host.querySelector('button[aria-label="Collapse SYN"]')).not.toBeNull();
+    expect(host.querySelector('[data-editor-feature-name="CAT"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+    host.remove();
+  });
+
+  it("gives icon-only editor buttons a hover title", () => {
+    const example = examples.find((candidate) => candidate.id === "hit-hitting-frame");
+    if (!example) {
+      throw new Error("Expected HIT example");
+    }
+    const structure = structuredClone(example.structure);
+
+    const markup = renderToStaticMarkup(
+      <FeatureStructureEditor
+        structure={structure}
+        onChange={() => undefined}
+        availableIndexes={collectIndexIds(structure)}
+        onSelectIndex={() => undefined}
+      />
+    );
+    const host = document.createElement("div");
+    host.innerHTML = markup;
+    const untitledButtons = [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .filter((button) => button.textContent?.trim() === "")
+      .filter((button) => !button.getAttribute("title")?.trim())
+      .map((button) => button.textContent?.trim() || button.getAttribute("aria-label") || button.className);
+
+    expect(untitledButtons).toEqual([]);
   });
 });

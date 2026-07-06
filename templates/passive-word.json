@@ -3,8 +3,8 @@
   "type": "passive-word",
   "features": [
     {
-      "id": "passive-phon",
-      "name": "PHON",
+      "id": "passive-form",
+      "name": "FORM",
       "value": {
         "kind": "list",
         "items": [
@@ -32,7 +32,62 @@
                 "structure": {
                   "id": "passive-cat-fs",
                   "type": "verb",
-                  "features": []
+                  "features": [
+                    {
+                      "id": "passive-select",
+                      "name": "SELECT",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "passive-xarg",
+                      "name": "XARG",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "passive-lid",
+                      "name": "LID",
+                      "value": {
+                        "kind": "list",
+                        "items": []
+                      }
+                    },
+                    {
+                      "id": "passive-vf",
+                      "name": "VF",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "psp"
+                      }
+                    },
+                    {
+                      "id": "passive-ic",
+                      "name": "IC",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "-"
+                      }
+                    },
+                    {
+                      "id": "passive-aux",
+                      "name": "AUX",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "-"
+                      }
+                    },
+                    {
+                      "id": "passive-inv",
+                      "name": "INV",
+                      "value": {
+                        "kind": "atomic",
+                        "value": "-"
+                      }
+                    }
+                  ]
                 }
               }
             },
@@ -48,6 +103,14 @@
                     "indexId": "2"
                   }
                 ]
+              }
+            },
+            {
+              "id": "passive-mrkg",
+              "name": "MRKG",
+              "value": {
+                "kind": "atomic",
+                "value": "unmk"
               }
             }
           ]
@@ -71,6 +134,43 @@
             "indexId": "2"
           }
         ]
+      }
+    },
+    {
+      "id": "passive-sem",
+      "name": "SEM",
+      "value": {
+        "kind": "feature-structure",
+        "structure": {
+          "id": "passive-sem-fs",
+          "type": "sem-obj",
+          "features": [
+            {
+              "id": "passive-index",
+              "name": "INDEX",
+              "value": {
+                "kind": "atomic",
+                "value": "s"
+              }
+            },
+            {
+              "id": "passive-ltop",
+              "name": "LTOP",
+              "value": {
+                "kind": "atomic",
+                "value": "l0"
+              }
+            },
+            {
+              "id": "passive-frames",
+              "name": "FRAMES",
+              "value": {
+                "kind": "list",
+                "items": []
+              }
+            }
+          ]
+        }
       }
     }
   ]

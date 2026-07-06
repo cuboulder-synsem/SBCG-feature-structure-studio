@@ -5,41 +5,77 @@ interface AvmPreviewProps {
   structure: FeatureStructure;
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
+  highlightedFeatureId?: string;
+  onSelectFeature?: (featureId: string) => void;
   depth?: number;
 }
 
-export function AvmPreview({ structure, activeIndex, onSelectIndex }: AvmPreviewProps) {
+export function AvmPreview({
+  structure,
+  activeIndex,
+  onSelectIndex,
+  highlightedFeatureId,
+  onSelectFeature
+}: AvmPreviewProps) {
   return (
     <div className="avm-preview" aria-label="AVM preview">
-      <PreviewStructure
+      <AvmStructurePreview
         structure={structure}
         activeIndex={activeIndex}
         onSelectIndex={onSelectIndex}
+        highlightedFeatureId={highlightedFeatureId}
+        onSelectFeature={onSelectFeature}
       />
     </div>
   );
 }
 
-function PreviewStructure({
+export function AvmStructurePreview({
   structure,
   activeIndex,
   onSelectIndex,
+  highlightedFeatureId,
+  onSelectFeature,
   depth = 0
 }: AvmPreviewProps) {
   const bracketDepth = Math.min(depth, 4);
-
-  return (
+  const structurePreview = (
     <div className={`preview-structure preview-depth-${bracketDepth}`} data-depth={depth}>
       <span className={`bracket left bracket-depth-${bracketDepth}`} aria-hidden="true" />
       <div className="preview-content">
         {structure.type && <div className="preview-type">{structure.type}</div>}
         {structure.features.map((feature) => (
-          <div className="preview-row" key={feature.id}>
+          <div
+            className={
+              feature.id === highlightedFeatureId
+                ? "preview-row feature-linked-active"
+                : "preview-row"
+            }
+            data-preview-feature-id={feature.id}
+            data-preview-feature-name={feature.name}
+            key={feature.id}
+            role={onSelectFeature ? "button" : undefined}
+            tabIndex={onSelectFeature ? 0 : undefined}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectFeature?.(feature.id);
+            }}
+            onKeyDown={(event) => {
+              if (!onSelectFeature || (event.key !== "Enter" && event.key !== " ")) {
+                return;
+              }
+              event.preventDefault();
+              event.stopPropagation();
+              onSelectFeature(feature.id);
+            }}
+          >
             <span className="preview-feature">{feature.name}</span>
             <PreviewValue
               value={feature.value}
               activeIndex={activeIndex}
               onSelectIndex={onSelectIndex}
+              highlightedFeatureId={highlightedFeatureId}
+              onSelectFeature={onSelectFeature}
               depth={depth}
             />
           </div>
@@ -48,16 +84,36 @@ function PreviewStructure({
       <span className={`bracket right bracket-depth-${bracketDepth}`} aria-hidden="true" />
     </div>
   );
+
+  if (!structure.tag) {
+    return structurePreview;
+  }
+
+  return (
+    <div className="preview-tagged-structure">
+      <TagBadge tag={structure.tag} activeIndex={activeIndex} onSelectIndex={onSelectIndex} />
+      {structurePreview}
+    </div>
+  );
 }
 
 interface PreviewValueProps {
   value: FSValue;
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
+  highlightedFeatureId?: string;
+  onSelectFeature?: (featureId: string) => void;
   depth: number;
 }
 
-function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValueProps) {
+function PreviewValue({
+  value,
+  activeIndex,
+  onSelectIndex,
+  highlightedFeatureId,
+  onSelectFeature,
+  depth
+}: PreviewValueProps) {
   const subscriptMarker = value.indexId ? (
     <SubscriptIndex
       indexId={value.indexId}
@@ -125,6 +181,8 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
                 value={item}
                 activeIndex={activeIndex}
                 onSelectIndex={onSelectIndex}
+                highlightedFeatureId={highlightedFeatureId}
+                onSelectFeature={onSelectFeature}
                 depth={depth}
               />
               {index < value.items.length - 1 && <span>, </span>}
@@ -148,6 +206,8 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
                 value={item}
                 activeIndex={activeIndex}
                 onSelectIndex={onSelectIndex}
+                highlightedFeatureId={highlightedFeatureId}
+                onSelectFeature={onSelectFeature}
                 depth={depth}
               />
               {index < value.items.length - 1 && <span>, </span>}
@@ -162,10 +222,12 @@ function PreviewValue({ value, activeIndex, onSelectIndex, depth }: PreviewValue
 
   return renderTaggedValue(value.tag, activeIndex, onSelectIndex,
     <span className="preview-nested">
-      <PreviewStructure
+      <AvmStructurePreview
         structure={value.structure}
         activeIndex={activeIndex}
         onSelectIndex={onSelectIndex}
+        highlightedFeatureId={highlightedFeatureId}
+        onSelectFeature={onSelectFeature}
         depth={depth + 1}
       />
       {subscriptMarker}
@@ -232,7 +294,10 @@ function TagBadge({
           : `preview-tag ${tagShapeClass}`
       }
       type="button"
-      onClick={() => onSelectIndex(activeTag)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectIndex(activeTag);
+      }}
       title={`Highlight tag ${tag}`}
     >
       {tag}
@@ -257,7 +322,10 @@ function IndexValue({
     <button
       className={indexId === activeIndex ? "preview-index-value active" : "preview-index-value"}
       type="button"
-      onClick={() => onSelectIndex(indexId)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectIndex(indexId);
+      }}
       title={`Highlight index ${indexId}`}
     >
       {indexId}
@@ -280,7 +348,10 @@ function SubscriptIndex({
         indexId === activeIndex ? "preview-index-subscript active" : "preview-index-subscript"
       }
       type="button"
-      onClick={() => onSelectIndex(indexId)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectIndex(indexId);
+      }}
       title={`Highlight index ${indexId}`}
     >
       <sub>{indexId}</sub>

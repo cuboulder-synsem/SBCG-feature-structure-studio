@@ -59,6 +59,7 @@ export type FSValue =
 export interface FeatureStructure {
   id: string;
   type?: string;
+  tag?: string;
   features: FeatureEntry[];
 }
 
@@ -154,9 +155,42 @@ export function createFeatureStructure(
 export function createInitialSign(): FeatureStructure {
   return createFeatureStructure("sign", [
     createFeatureEntry("PHON", createListValue([createAtomicValue("")])),
-    createFeatureEntry("SYN", createNestedFeatureStructureValue(createFeatureStructure("syn-obj"))),
-    createFeatureEntry("ARG-ST", createListValue([])),
-    createFeatureEntry("SEM", createNestedFeatureStructureValue(createFeatureStructure("sem-obj")))
+    createFeatureEntry("FORM", createListValue([])),
+    createFeatureEntry(
+      "SYN",
+      createNestedFeatureStructureValue(
+        createFeatureStructure("syn-obj", [
+          createFeatureEntry(
+            "CAT",
+            createNestedFeatureStructureValue(createFeatureStructure("category"))
+          ),
+          createFeatureEntry("VAL", createListValue([])),
+          createFeatureEntry("MRKG", createAtomicValue(""))
+        ])
+      )
+    ),
+    createFeatureEntry(
+      "SEM",
+      createNestedFeatureStructureValue(
+        createFeatureStructure("sem-obj", [
+          createFeatureEntry("INDEX", createAtomicValue("")),
+          createFeatureEntry("LTOP", createAtomicValue("")),
+          createFeatureEntry("FRAMES", createListValue([]))
+        ])
+      )
+    ),
+    createFeatureEntry(
+      "CNTXT",
+      createNestedFeatureStructureValue(
+        createFeatureStructure("context-obj", [
+          createFeatureEntry(
+            "C-INDS",
+            createNestedFeatureStructureValue(createFeatureStructure("contextual-index"))
+          ),
+          createFeatureEntry("BCKGRND", createListValue([]))
+        ])
+      )
+    )
   ]);
 }
 
@@ -229,16 +263,27 @@ export function collectTagIdsFromValue(value: FSValue, ids = new Set<string>()):
   }
 
   if (value.kind === "feature-structure") {
-    value.structure.features.forEach((feature) => collectTagIdsFromValue(feature.value, ids));
+    collectTagIdsFromStructure(value.structure, ids);
   }
 
   return ids;
 }
 
 export function collectTagIds(structure: FeatureStructure): string[] {
-  const ids = new Set<string>();
-  structure.features.forEach((feature) => collectTagIdsFromValue(feature.value, ids));
+  const ids = collectTagIdsFromStructure(structure);
   return [...ids].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+function collectTagIdsFromStructure(
+  structure: FeatureStructure,
+  ids = new Set<string>()
+): Set<string> {
+  if (structure.tag) {
+    ids.add(structure.tag);
+  }
+
+  structure.features.forEach((feature) => collectTagIdsFromValue(feature.value, ids));
+  return ids;
 }
 
 export function collectTagDefinitionsFromValue(
@@ -257,18 +302,30 @@ export function collectTagDefinitionsFromValue(
   }
 
   if (value.kind === "feature-structure") {
-    value.structure.features.forEach((feature) =>
-      collectTagDefinitionsFromValue(feature.value, definitions)
-    );
+    collectTagDefinitionsFromStructure(value.structure, definitions);
   }
 
   return definitions;
 }
 
 export function collectTagDefinitions(structure: FeatureStructure): TagDefinition[] {
-  const definitions = new Map<string, TagDefinition>();
-  structure.features.forEach((feature) => collectTagDefinitionsFromValue(feature.value, definitions));
+  const definitions = collectTagDefinitionsFromStructure(structure);
   return [...definitions.values()];
+}
+
+function collectTagDefinitionsFromStructure(
+  structure: FeatureStructure,
+  definitions = new Map<string, TagDefinition>()
+): Map<string, TagDefinition> {
+  if (structure.tag && !definitions.has(structure.tag)) {
+    definitions.set(structure.tag, {
+      tag: structure.tag,
+      valueKind: "feature-structure"
+    });
+  }
+
+  structure.features.forEach((feature) => collectTagDefinitionsFromValue(feature.value, definitions));
+  return definitions;
 }
 
 export function orderFeaturesCanonically(features: FeatureEntry[]): FeatureEntry[] {

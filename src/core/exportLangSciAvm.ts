@@ -6,7 +6,8 @@ export interface ExportOptions {
 
 export function exportLangSciAvm(structure: FeatureStructure, options: ExportOptions = {}): string {
   const indentSize = options.indentSize ?? 2;
-  return `\\avm{\n${renderStructure(structure, 0, indentSize)}\n}`;
+  const avm = `\\avm{\n${renderStructure(structure, 0, indentSize)}\n}`;
+  return structure.tag ? `${renderTag(structure.tag)}${avm}` : avm;
 }
 
 function renderStructure(structure: FeatureStructure, level: number, indentSize: number): string {

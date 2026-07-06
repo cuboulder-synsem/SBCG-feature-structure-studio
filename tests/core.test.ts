@@ -7,6 +7,7 @@ import {
   createAtomicValue,
   createFeatureEntry,
   createFeatureStructure,
+  createInitialSign,
   createIndexRefValue,
   createListValue,
   createNestedFeatureStructureValue,
@@ -21,6 +22,30 @@ import { exportJson, importJson } from "../src/core/importExportJson";
 import { createTreeNode } from "../src/core/treeModel";
 
 describe("Feature Structure Studio core model", () => {
+  it("creates an initial sign with only sign-licensed major features", () => {
+    const sign = createInitialSign();
+
+    expect(sign.type).toBe("sign");
+    expect(sign.features.map((feature) => feature.name)).toEqual([
+      "PHON",
+      "FORM",
+      "SYN",
+      "SEM",
+      "CNTXT"
+    ]);
+    const syn = sign.features.find((feature) => feature.name === "SYN");
+
+    expect(syn?.value.kind).toBe("feature-structure");
+    if (syn?.value.kind !== "feature-structure") {
+      throw new Error("Expected SYN to be a feature structure");
+    }
+    expect(syn.value.structure.features.map((feature) => feature.name)).toEqual([
+      "CAT",
+      "VAL",
+      "MRKG"
+    ]);
+  });
+
   it("creates a feature structure with editable feature entries", () => {
     const fs = createFeatureStructure("sign", [
       createFeatureEntry("PHON", createListValue([createAtomicValue("walks")]))
@@ -90,6 +115,19 @@ describe("Feature Structure Studio core model", () => {
       { tag: "L", valueKind: "list" },
       { tag: "1", valueKind: "type" }
     ]);
+  });
+
+  it("lets HPSG tags identify whole feature structures", () => {
+    const taggedStructure = { ...createFeatureStructure("phrase"), tag: "A" };
+    const referenceTarget = createNestedFeatureStructureValue(createFeatureStructure("phrase"));
+
+    expect(collectTagIds(taggedStructure)).toEqual(["A"]);
+    expect(collectTagDefinitions(taggedStructure)).toEqual([
+      { tag: "A", valueKind: "feature-structure" }
+    ]);
+    expect(
+      createTagReferenceForValue(referenceTarget, { tag: "A", valueKind: "feature-structure" })
+    ).toEqual(createTagRefValue("A"));
   });
 
   it("keeps list brackets when a list feature references an argument tag", () => {

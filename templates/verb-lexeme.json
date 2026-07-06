@@ -32,8 +32,79 @@
                 "structure": {
                   "id": "verb-lexeme-cat-fs",
                   "type": "verb",
-                  "features": []
+                  "features": [
+                    {
+                      "id": "verb-lexeme-select",
+                      "name": "SELECT",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-xarg",
+                      "name": "XARG",
+                      "value": {
+                        "kind": "underspecified"
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-lid",
+                      "name": "LID",
+                      "value": {
+                        "kind": "list",
+                        "items": []
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-vf",
+                      "name": "VF",
+                      "value": {
+                        "kind": "atomic",
+                        "value": ""
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-ic",
+                      "name": "IC",
+                      "value": {
+                        "kind": "atomic",
+                        "value": ""
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-aux",
+                      "name": "AUX",
+                      "value": {
+                        "kind": "atomic",
+                        "value": ""
+                      }
+                    },
+                    {
+                      "id": "verb-lexeme-inv",
+                      "name": "INV",
+                      "value": {
+                        "kind": "atomic",
+                        "value": ""
+                      }
+                    }
+                  ]
                 }
+              }
+            },
+            {
+              "id": "verb-lexeme-val",
+              "name": "VAL",
+              "value": {
+                "kind": "list",
+                "items": []
+              }
+            },
+            {
+              "id": "verb-lexeme-mrkg",
+              "name": "MRKG",
+              "value": {
+                "kind": "atomic",
+                "value": ""
               }
             }
           ]
@@ -62,7 +133,32 @@
         "structure": {
           "id": "verb-lexeme-sem-fs",
           "type": "sem-obj",
-          "features": []
+          "features": [
+            {
+              "id": "verb-lexeme-index",
+              "name": "INDEX",
+              "value": {
+                "kind": "atomic",
+                "value": ""
+              }
+            },
+            {
+              "id": "verb-lexeme-ltop",
+              "name": "LTOP",
+              "value": {
+                "kind": "atomic",
+                "value": ""
+              }
+            },
+            {
+              "id": "verb-lexeme-frames",
+              "name": "FRAMES",
+              "value": {
+                "kind": "list",
+                "items": []
+              }
+            }
+          ]
         }
       }
     }

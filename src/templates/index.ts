@@ -1,10 +1,8 @@
-import basicSign from "../../templates/basic-sign.json";
 import hitHittingFrame from "../../templates/hit-hitting-frame.json";
-import lexeme from "../../templates/lexeme.json";
 import passiveWord from "../../templates/passive-word.json";
 import transitiveVerbWord from "../../templates/transitive-verb-word.json";
 import verbLexeme from "../../templates/verb-lexeme.json";
-import word from "../../templates/word.json";
+import { createStarterFeatureStructure } from "../core/starterStructures";
 import type { FeatureStructure } from "../core/model";
 
 export interface TemplateDefinition {
@@ -13,20 +11,22 @@ export interface TemplateDefinition {
   structure: FeatureStructure;
 }
 
-export const templates: TemplateDefinition[] = [
-  { id: "basic-sign", name: "basic-sign", structure: basicSign as FeatureStructure },
-  { id: "word", name: "word", structure: word as FeatureStructure },
-  { id: "lexeme", name: "lexeme", structure: lexeme as FeatureStructure },
+const starterTemplateTypes = ["sign", "lexeme", "word", "phrase", "construct"] as const;
+
+export const templates: TemplateDefinition[] = starterTemplateTypes.map((type) => ({
+  id: type,
+  name: type,
+  structure: createStarterFeatureStructure(type)
+}));
+
+export const examples: TemplateDefinition[] = [
   { id: "verb-lexeme", name: "verb-lexeme", structure: verbLexeme as FeatureStructure },
   {
     id: "transitive-verb-word",
     name: "transitive-verb-word",
     structure: transitiveVerbWord as FeatureStructure
   },
-  { id: "passive-word", name: "passive-word", structure: passiveWord as FeatureStructure }
-];
-
-export const examples: TemplateDefinition[] = [
+  { id: "passive-word", name: "passive-word", structure: passiveWord as FeatureStructure },
   {
     id: "hit-hitting-frame",
     name: "hit-hitting-frame",

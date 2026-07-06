@@ -242,7 +242,9 @@ export const sbcgTypes: Record<string, SbcgTypeSpec> = {
     features: [
       feature("MTR", "sign", "feature-structure", "Mother sign."),
       feature("DTRS", "nelist(sign)", "list", "Nonempty list of daughter signs; left empty until supplied."),
-      feature("CXT-CONTENT", "list(frame)", "list", "Constructional semantic contribution.")
+      feature("CXT-CONTENT", "list(frame)", "list", "Constructional semantic contribution.", {
+        defaultIncluded: false
+      })
     ]
   },
   category: {

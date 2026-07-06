@@ -48,7 +48,7 @@ pnpm dev
 - Infer SBCG-appropriate features from Sag-style grammar-signature types such as `sign`, `word`, `lexeme`, `verb-lexeme`, `phrase`, `syn-obj`, `valence`, `sem-obj`, `context-obj`, `category`, `verb`, and `noun`.
 - Infer value shape and expected value type from the central type registry.
 - Render registry-defined atomic domains such as `VF`, `AUX`, `INV`, `MRKG`, and `CASE` as dropdowns.
-- Load JSON templates from `templates/`.
+- Load generated Sag-type starters and JSON examples.
 - Save feature structures as a local project file.
 - Open saved local project files.
 - Export feature structures as systematic `langsci-avm` LaTeX.
@@ -99,18 +99,17 @@ The first-pass exporter is systematic but intentionally modest: it handles neste
 
 This repo includes `.github/workflows/deploy-pages.yml`. After the project is pushed to a GitHub repository named `feature-structure-studio`, enable **Settings -> Pages -> Source: GitHub Actions**. Every push to `main` will run tests, build the Vite app with `VITE_BASE_PATH=/feature-structure-studio/`, and publish the static site.
 
-## Templates
+## Templates And Examples
 
-The initial templates are stored under `templates/`:
+The Template dropdown is generated from the SBCG type registry in `src/templates/index.ts`:
 
-- `basic-sign.json`
-- `word.json`
-- `lexeme.json`
-- `verb-lexeme.json`
-- `transitive-verb-word.json`
-- `passive-word.json`
+- `sign`
+- `lexeme`
+- `word`
+- `phrase`
+- `construct`
 
-The UI imports them through `src/templates/index.ts`.
+The Example dropdown keeps richer JSON presets from `templates/`, including verb lexeme, transitive word, passive word, and HIT frame examples.
 
 ## Architecture
 

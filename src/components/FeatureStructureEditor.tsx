@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
+  ChevronDown,
+  ChevronRight,
   Circle,
   CornerDownRight,
   GripVertical,
@@ -65,7 +67,11 @@ interface FeatureStructureEditorProps {
   availableTags?: TagDefinition[];
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
+  highlightedFeatureId?: string;
+  onSelectFeature?: (featureId: string) => void;
+  onHoverFeature?: (featureId?: string) => void;
   compact?: boolean;
+  featureDepth?: number;
   rootStructure?: FeatureStructure;
   onRootChange?: (structure: FeatureStructure) => void;
 }
@@ -77,7 +83,11 @@ export function FeatureStructureEditor({
   availableTags = [],
   activeIndex,
   onSelectIndex,
+  highlightedFeatureId,
+  onSelectFeature,
+  onHoverFeature,
   compact = false,
+  featureDepth = 0,
   rootStructure: rootStructureProp,
   onRootChange: onRootChangeProp
 }: FeatureStructureEditorProps) {
@@ -89,6 +99,7 @@ export function FeatureStructureEditor({
     featureId: string;
     position: FeatureDropPosition;
   } | null>(null);
+  const [collapsedFeatureIds, setCollapsedFeatureIds] = useState<Set<string>>(() => new Set());
   const typeSpec = getSbcgTypeSpec(structure.type);
   const missingFeatureSuggestions = getMissingFeatureSuggestions(structure);
   const typeOptionsId = `${structure.id}-type-options`;
@@ -180,6 +191,17 @@ export function FeatureStructureEditor({
     setDraggedFeatureId(null);
     setDragOverFeature(null);
   };
+  const toggleFeatureCollapse = (featureId: string) => {
+    setCollapsedFeatureIds((current) => {
+      const next = new Set(current);
+      if (next.has(featureId)) {
+        next.delete(featureId);
+      } else {
+        next.add(featureId);
+      }
+      return next;
+    });
+  };
 
   return (
     <section className={compact ? "fs-editor compact" : "fs-editor"}>
@@ -234,16 +256,21 @@ export function FeatureStructureEditor({
           const frameParticipant = participantByFeatureId.get(feature.id);
           const dragPosition =
             dragOverFeature?.featureId === feature.id ? dragOverFeature.position : undefined;
+          const isCollapsible = featureDepth < 2 && isCollapsibleFeatureValue(feature.value);
+          const isCollapsed = isCollapsible && collapsedFeatureIds.has(feature.id);
           return (
             <div
               className={[
                 "feature-row",
                 draggedFeatureId === feature.id ? "dragging" : "",
+                highlightedFeatureId === feature.id ? "feature-linked-active" : "",
                 dragPosition ? `drag-over-${dragPosition}` : ""
               ]
                 .filter(Boolean)
                 .join(" ")}
+              data-editor-feature-id={feature.id}
               data-feature-name={feature.name}
+              data-editor-feature-name={feature.name}
               key={feature.id}
               onDragLeave={(event) => {
                 if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
@@ -255,6 +282,10 @@ export function FeatureStructureEditor({
               }}
               onDragOver={(event) => updateFeatureDragTarget(feature.id, event)}
               onDrop={(event) => dropFeatureOnTarget(feature.id, event)}
+              onClick={() => onSelectFeature?.(feature.id)}
+              onFocusCapture={() => onSelectFeature?.(feature.id)}
+              onMouseEnter={() => onHoverFeature?.(feature.id)}
+              onMouseLeave={() => onHoverFeature?.(undefined)}
             >
             <button
               className="icon-button feature-drag-handle"
@@ -267,6 +298,22 @@ export function FeatureStructureEditor({
             >
               <GripVertical size={16} />
             </button>
+            {isCollapsible ? (
+              <button
+                className="icon-button feature-collapse-button"
+                type="button"
+                aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${feature.name}`}
+                title={`${isCollapsed ? "Expand" : "Collapse"} ${feature.name}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleFeatureCollapse(feature.id);
+                }}
+              >
+                {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              </button>
+            ) : (
+              <span className="feature-collapse-spacer" aria-hidden="true" />
+            )}
             <input
               className="feature-name-input"
               aria-label="Feature name"
@@ -286,19 +333,29 @@ export function FeatureStructureEditor({
               }}
             />
             <div className="feature-value-cell">
-              <ValueEditor
-                featureName={feature.name}
-                featureSpec={featureSpec}
-                value={feature.value}
-                onChange={(value) => updateFeature(feature.id, { ...feature, value })}
-                availableIndexes={availableIndexes}
-                availableTags={availableTags}
-                activeIndex={activeIndex}
-                onSelectIndex={onSelectIndex}
-                rootStructure={rootStructure}
-                onRootChange={onRootChange}
-              />
-              {frameParticipant && argStItems.length > 0 && (
+              {isCollapsed ? (
+                <span className="collapsed-feature-summary">
+                  {getCollapsedFeatureSummary(feature.value)} collapsed
+                </span>
+              ) : (
+                <ValueEditor
+                  featureName={feature.name}
+                  featureSpec={featureSpec}
+                  value={feature.value}
+                  onChange={(value) => updateFeature(feature.id, { ...feature, value })}
+                  availableIndexes={availableIndexes}
+                  availableTags={availableTags}
+                  activeIndex={activeIndex}
+                  onSelectIndex={onSelectIndex}
+                  highlightedFeatureId={highlightedFeatureId}
+                  onSelectFeature={onSelectFeature}
+                  onHoverFeature={onHoverFeature}
+                  featureDepth={featureDepth}
+                  rootStructure={rootStructure}
+                  onRootChange={onRootChange}
+                />
+              )}
+              {!isCollapsed && frameParticipant && argStItems.length > 0 && (
                 <InlineFrameLinkControls
                   participant={frameParticipant}
                   argStItems={argStItems}
@@ -379,6 +436,21 @@ function getFeatureDropPosition(event: DragEvent<HTMLDivElement>): FeatureDropPo
     return "before";
   }
   return event.clientY > rect.top + rect.height / 2 ? "after" : "before";
+}
+
+function isCollapsibleFeatureValue(value: FSValue): boolean {
+  return value.kind === "feature-structure" || value.kind === "list";
+}
+
+function getCollapsedFeatureSummary(value: FSValue): string {
+  if (value.kind === "feature-structure") {
+    return value.structure.type || "feature structure";
+  }
+  if (value.kind === "list") {
+    const itemLabel = value.items.length === 1 ? "item" : "items";
+    return `list (${value.items.length} ${itemLabel})`;
+  }
+  return value.kind;
 }
 
 function LicensedFeaturePicker({
@@ -554,6 +626,10 @@ interface ValueEditorProps {
   availableTags: TagDefinition[];
   activeIndex?: string;
   onSelectIndex: (indexId: string) => void;
+  highlightedFeatureId?: string;
+  onSelectFeature?: (featureId: string) => void;
+  onHoverFeature?: (featureId?: string) => void;
+  featureDepth: number;
   featureName?: string;
   featureSpec?: SbcgFeatureSpec;
   rootStructure: FeatureStructure;
@@ -567,6 +643,10 @@ function ValueEditor({
   availableTags,
   activeIndex,
   onSelectIndex,
+  highlightedFeatureId,
+  onSelectFeature,
+  onHoverFeature,
+  featureDepth,
   featureName,
   featureSpec,
   rootStructure,
@@ -623,6 +703,10 @@ function ValueEditor({
         availableTags={availableTags}
         activeIndex={activeIndex}
         onSelectIndex={onSelectIndex}
+        highlightedFeatureId={highlightedFeatureId}
+        onSelectFeature={onSelectFeature}
+        onHoverFeature={onHoverFeature}
+        featureDepth={featureDepth}
         rootStructure={rootStructure}
         onRootChange={onRootChange}
       />
@@ -759,6 +843,7 @@ function ValueActionsMenu({
         <button
           className="icon-text-button subtle"
           type="button"
+          title="Clear tag"
           disabled={!currentTag}
           onClick={() => {
             setTag("");
@@ -821,6 +906,7 @@ function ValueBodyEditor(props: ValueEditorProps) {
       <button
         className={value.indexId === activeIndex ? "index-pill active" : "index-pill"}
         type="button"
+        title={`Highlight index ${value.indexId}`}
         onClick={() => onSelectIndex(value.indexId)}
       >
         #{value.indexId}
@@ -833,6 +919,7 @@ function ValueBodyEditor(props: ValueEditorProps) {
       <button
         className={`tag-pill${`tag:${value.tag}` === activeIndex ? " active" : ""}`}
         type="button"
+        title={`Highlight tag ${value.tag}`}
         onClick={() => onSelectIndex(`tag:${value.tag}`)}
       >
         {value.tag}
@@ -866,6 +953,10 @@ function ValueBodyEditor(props: ValueEditorProps) {
                 availableTags={availableTags}
                 activeIndex={activeIndex}
                 onSelectIndex={onSelectIndex}
+                highlightedFeatureId={props.highlightedFeatureId}
+                onSelectFeature={props.onSelectFeature}
+                onHoverFeature={props.onHoverFeature}
+                featureDepth={props.featureDepth + 1}
                 rootStructure={props.rootStructure}
                 onRootChange={props.onRootChange}
               />
@@ -911,6 +1002,10 @@ function ValueBodyEditor(props: ValueEditorProps) {
       availableTags={availableTags}
       activeIndex={activeIndex}
       onSelectIndex={onSelectIndex}
+      highlightedFeatureId={props.highlightedFeatureId}
+      onSelectFeature={props.onSelectFeature}
+      onHoverFeature={props.onHoverFeature}
+      featureDepth={props.featureDepth + 1}
       rootStructure={props.rootStructure}
       onRootChange={props.onRootChange}
       compact

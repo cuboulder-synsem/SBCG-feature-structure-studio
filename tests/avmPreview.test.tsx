@@ -98,6 +98,48 @@ describe("AVM preview brackets", () => {
     expect(markup).toContain("<sub>i</sub>");
   });
 
+  it("renders whole feature-structure tags before the root AVM bracket", () => {
+    const structure = {
+      ...createFeatureStructure("phrase", [
+        createFeatureEntry("SYN", createTypeValue("phrase"))
+      ]),
+      tag: "A"
+    };
+
+    const markup = renderToStaticMarkup(
+      <AvmPreview structure={structure} onSelectIndex={() => undefined} />
+    );
+    const tag = markup.indexOf("preview-tag");
+    const structureBracket = markup.indexOf("preview-structure");
+
+    expect(markup).toContain("preview-tagged-structure");
+    expect(tag).toBeGreaterThanOrEqual(0);
+    expect(tag).toBeLessThan(structureBracket);
+  });
+
+  it("centers whole-feature-structure tags against the AVM they identify", () => {
+    const stylesCss = readFileSync("src/styles.css", "utf8");
+    const taggedStructureRule = stylesCss.match(/\.preview-tagged-structure\s*\{[^}]+\}/)?.[0] ?? "";
+
+    expect(taggedStructureRule).toContain("align-items: center");
+    expect(taggedStructureRule).toContain("vertical-align: middle");
+  });
+
+  it("uses the same rectangular boxed tag when a tag reference is a feature value", () => {
+    const structure = createFeatureStructure("phrase", [
+      createFeatureEntry("SYN", createTagRefValue("1"))
+    ]);
+
+    const markup = renderToStaticMarkup(
+      <AvmPreview structure={structure} onSelectIndex={() => undefined} />
+    );
+    const stylesCss = readFileSync("src/styles.css", "utf8");
+    const tagRule = stylesCss.match(/\.preview-tag,\s*\.tag-pill\s*\{[^}]+\}/)?.[0] ?? "";
+
+    expect(markup).toContain("preview-tag preview-tag-number");
+    expect(tagRule).toContain("border-radius: 0");
+  });
+
   it("renders numeric tags upright and alphabetic tags italicized", () => {
     const structure = createFeatureStructure("lexeme", [
       createFeatureEntry("ARG-ST", createListValue([{ ...createTypeValue("NP"), tag: "1" }])),
@@ -203,12 +245,15 @@ describe("AVM preview brackets", () => {
     expect(previewFeatureRule).not.toContain("font-weight: 700");
   });
 
-  it("centers feature labels against bracketed values in paper view rows", () => {
+  it("top-aligns feature labels against bracketed values in paper view rows", () => {
     const stylesCss = readFileSync("src/styles.css", "utf8");
     const previewRowRule = stylesCss.match(/\.preview-row\s*\{[^}]+\}/)?.[0] ?? "";
+    const previewContentRule = stylesCss.match(/\.preview-content\s*\{[^}]+\}/)?.[0] ?? "";
 
-    expect(previewRowRule).toContain("align-items: center");
-    expect(previewRowRule).not.toContain("align-items: baseline");
+    expect(previewRowRule).toContain("align-items: start");
+    expect(previewRowRule).not.toContain("align-items: center");
+    expect(previewContentRule).toContain("align-self: start");
+    expect(previewContentRule).not.toContain("align-self: center");
   });
 
   it("sizes tall list angle brackets from nested content without intrinsic SVG height", () => {
